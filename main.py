@@ -1,5 +1,6 @@
 import os
 import argparse
+import torch
 from config import Params
 from dataset import create_dataset
 from torch.utils.data import DataLoader
@@ -24,6 +25,9 @@ def main():
             raise ValueError('ERROR: Root %s not exists!' % args.root)
     else:
         params.dataset_root = args.root
+        
+    #Check for CUDA
+    params.cuda_available = torch.cuda.is_available()
 
     # create dataset and transformation
     LOG('Creating Dataset and Transformation......')

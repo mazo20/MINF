@@ -71,9 +71,10 @@ class SegmentationNetwork(nn.Module):
         # block.append(nn.Upsample(scale_factor=self.params.output_stride, mode='bilinear', align_corners=False))
         block.append(nn.Upsample((self.params.image_size, self.params.image_size), mode='bilinear', align_corners=True))
 
-        # self.network = nn.Sequential(*block).cuda()
-        self.network = nn.Sequential(*block)
-        # print(self.network)
+        if self.params.cuda_available:
+            self.network = nn.Sequential(*block).cuda()
+        else:
+            self.network = nn.Sequential(*block)
 
         # build loss
         self.loss_fn = nn.CrossEntropyLoss(ignore_index=255)
@@ -120,16 +121,16 @@ class SegmentationNetwork(nn.Module):
         for batch_idx, batch in enumerate(train_loader):
             self.pb.click(batch_idx, total_batch)
             image, label = batch['image'], batch['label']
-            # image_cuda, label_cuda = image.cuda(), label.cuda()
-            image_cuda, label_cuda = image, label
+            if self.params.cuda_available:
+                image, label = image.cuda(), label.cuda()
 
             # checkpoint split
             if self.params.should_split:
-                image_cuda.requires_grad_()
-                out = checkpoint_sequential(self.network, self.params.split, image_cuda)
+                image.requires_grad_()
+                out = checkpoint_sequential(self.network, self.params.split, image)
             else:
-                out = self.network(image_cuda)
-            loss = self.loss_fn(out, label_cuda)
+                out = self.network(image)
+            loss = self.loss_fn(out, label)
 
             # optimize
             self.opt.zero_grad()
@@ -178,17 +179,17 @@ class SegmentationNetwork(nn.Module):
         for batch_idx, batch in enumerate(val_loader):
             self.pb.click(batch_idx, total_batch)
             image, label = batch['image'], batch['label']
-            # image_cuda, label_cuda = image.cuda(), label.cuda()
-            image_cuda, label_cuda = image, label
+            if self.params.cuda_available:
+                image, label = image.cuda(), label.cuda()
 
             # checkpoint split
             if self.params.should_split:
-                image_cuda.requires_grad_()
-                out = checkpoint_sequential(self.network, self.params.split, image_cuda)
+                image.requires_grad_()
+                out = checkpoint_sequential(self.network, self.params.split, image)
             else:
-                out = self.network(image_cuda)
+                out = self.network(image)
 
-            loss = self.loss_fn(out, label_cuda)
+            loss = self.loss_fn(out, label)
 
             val_loss += loss.item()
 
@@ -250,8 +251,9 @@ class SegmentationNetwork(nn.Module):
         Test network on test set
         """
         print('Testing:')
-        # set mode eval
-        # torch.cuda.empty_cache()
+        #Set eval mode
+        if self.params.cuda_available:
+            torch.cuda.empty_cache()
         self.network.eval()
 
         # prepare test data
@@ -268,13 +270,14 @@ class SegmentationNetwork(nn.Module):
         for batch_idx, batch in enumerate(test_loader):
             self.pb.click(batch_idx, total_batch)
             image, label, name = batch['image'], batch['label'], batch['label_name']
-            # image_cuda, label_cuda = image.cuda(), label.cuda()
-            image_cuda, label_cuda = image, label
+            if self.params.cuda_available:
+                image, label = image.cuda(), label.cuda()
+                
             if self.params.should_split:
-                image_cuda.requires_grad_()
-                out = checkpoint_sequential(self.network, self.params.split, image_cuda)
+                image.requires_grad_()
+                out = checkpoint_sequential(self.network, self.params.split, image)
             else:
-                out = self.network(image_cuda)
+                out = self.network(image)
 
             for i in range(self.params.test_batch):
                 idx = batch_idx*self.params.test_batch+i

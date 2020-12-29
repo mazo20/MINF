@@ -36,6 +36,7 @@ class Params():
         self.display = 1  # show train result every display epoch
         self.should_split = True  # should split training procedure into several parts
         self.split = 2  # number of split
+        self.cuda_available = True
 
         # model restore parameters
         self.resume_from = None  # None for train from scratch

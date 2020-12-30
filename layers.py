@@ -62,6 +62,8 @@ class InvertedResidual(nn.Module):
         else:
             # plain block
             out = self.block(x)
+            
+        print(out.size())
 
         return out
 
@@ -77,15 +79,15 @@ def get_inverted_residual_block_arr(in_, out_, t=6, s=1, n=1):
 class ASPP_plus(nn.Module):
     def __init__(self, params):
         super(ASPP_plus, self).__init__()
-        self.conv11 = nn.Sequential(nn.Conv2d(params.c[-1], 256, 1, bias=False),
+        self.conv11 = nn.Sequential(nn.Conv2d(params.channels[-1], 256, 1, bias=False),
                                      nn.BatchNorm2d(256))
-        self.conv33_1 = nn.Sequential(nn.Conv2d(params.c[-1], 256, 3,
+        self.conv33_1 = nn.Sequential(nn.Conv2d(params.channels[-1], 256, 3,
                                                 padding=params.aspp[0], dilation=params.aspp[0], bias=False),
                                       nn.BatchNorm2d(256))
-        self.conv33_2 = nn.Sequential(nn.Conv2d(params.c[-1], 256, 3,
+        self.conv33_2 = nn.Sequential(nn.Conv2d(params.channels[-1], 256, 3,
                                                 padding=params.aspp[1], dilation=params.aspp[1], bias=False),
                                       nn.BatchNorm2d(256))
-        self.conv33_3 = nn.Sequential(nn.Conv2d(params.c[-1], 256, 3,
+        self.conv33_3 = nn.Sequential(nn.Conv2d(params.channels[-1], 256, 3,
                                                 padding=params.aspp[2], dilation=params.aspp[2], bias=False),
                                       nn.BatchNorm2d(256))
         self.concate_conv = nn.Sequential(nn.Conv2d(256*5, 256, 1, bias=False),
@@ -107,4 +109,8 @@ class ASPP_plus(nn.Module):
         # concate
         concate = torch.cat([conv11, conv33_1, conv33_2, conv33_3, upsample], dim=1)
 
-        return self.concate_conv(concate)
+        concatenate_conv = self.concate_conv(concate)
+        
+        print(concatenate_conv.size())
+        
+        return concatenate_conv

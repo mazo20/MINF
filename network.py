@@ -40,55 +40,49 @@ class SegmentationNetwork(nn.Module):
         block = []
 
         # conv layer 1
-        block.append(nn.Sequential(nn.Conv2d(3, self.params.c[0], 3, stride=self.params.s[0], padding=1, bias=False),
-                                   nn.BatchNorm2d(self.params.c[0]),
-                                   # nn.Dropout2d(self.params.dropout_prob, inplace=True),
+        block.append(nn.Sequential(nn.Conv2d(3, self.params.channels[0], 3, stride=self.params.stride[0], padding=1, bias=False),
+                                   nn.BatchNorm2d(self.params.channels[0]),
                                    nn.ReLU6()))
 
         # conv layer 2-7
         for i in range(6):
-            block.extend(layers.get_inverted_residual_block_arr(self.params.c[i], self.params.c[i+1],
-                                                                t=self.params.t[i+1], s=self.params.s[i+1],
+            block.extend(layers.get_inverted_residual_block_arr(self.params.channels[i], self.params.channels[i+1],
+                                                                t=self.params.t[i+1], s=self.params.stride[i+1],
                                                                 n=self.params.n[i+1]))
 
         # dilated conv layer 1-4
         # first dilation=rate, follows dilation=multi_grid*rate
         rate = self.params.down_sample_rate // self.params.output_stride
-        print(rate)
-        block.append(layers.InvertedResidual(self.params.c[6], self.params.c[6],
+        block.append(layers.InvertedResidual(self.params.channels[6], self.params.channels[6],
                                              t=self.params.t[6], s=1, dilation=rate))
         for i in range(3):
-            block.append(layers.InvertedResidual(self.params.c[6], self.params.c[6],
+            block.append(layers.InvertedResidual(self.params.channels[6], self.params.channels[6],
                                                  t=self.params.t[6], s=1, dilation=rate*self.params.multi_grid[i]))
 
         # ASPP layer
-        block.append(layers.ASPP_plus(self.params))
+        # block.append(layers.ASPP_plus(self.params))
 
         # final conv layer
-        block.append(nn.Conv2d(256, self.params.num_class, 1))
+        # block.append(nn.Conv2d(256, self.params.num_class, 1))
 
         # bilinear upsample
-        # block.append(nn.Upsample(scale_factor=self.params.output_stride, mode='bilinear', align_corners=False))
-        block.append(nn.Upsample((self.params.image_size, self.params.image_size), mode='bilinear', align_corners=True))
+        block.append(nn.Upsample(scale_factor=self.params.output_stride, mode='bilinear', align_corners=False))
 
         if self.params.cuda_available:
             self.network = nn.Sequential(*block).cuda()
         else:
             self.network = nn.Sequential(*block)
 
-        # build loss
         self.loss_fn = nn.CrossEntropyLoss(ignore_index=255)
-
-        # optimizer
         self.opt = torch.optim.RMSprop(self.network.parameters(),
                                        lr=self.params.base_lr,
                                        momentum=self.params.momentum,
                                        weight_decay=self.params.weight_decay)
 
-        # initialize
+        # Initialize
         self.initialize()
 
-        # load data
+        # Load data
         self.load_checkpoint()
         self.load_model()
 
@@ -111,36 +105,26 @@ class SegmentationNetwork(nn.Module):
                                   batch_size=self.params.train_batch,
                                   shuffle=self.params.shuffle,
                                   num_workers=self.params.dataloader_workers)
-        train_size = len(self.datasets['train'])
-        if train_size % self.params.train_batch != 0:
-            total_batch = train_size // self.params.train_batch + 1
-        else:
-            total_batch = train_size // self.params.train_batch
+        total_batch = self.get_total_batch('train')
 
         # train through dataset
         for batch_idx, batch in enumerate(train_loader):
             self.pb.click(batch_idx, total_batch)
+            
             image, label = batch['image'], batch['label']
             if self.params.cuda_available:
                 image, label = image.cuda(), label.cuda()
 
-            # checkpoint split
-            if self.params.should_split:
-                image.requires_grad_()
-                out = checkpoint_sequential(self.network, self.params.split, image)
-            else:
-                out = self.network(image)
+            out = self.forward_split(image)
             loss = self.loss_fn(out, label)
 
-            # optimize
+            # Optimize
             self.opt.zero_grad()
             loss.backward()
             self.opt.step()
-
-            # accumulate
             train_loss += loss.item()
 
-            # record first loss
+            # Record first loss
             if self.train_loss == []:
                 self.train_loss.append(train_loss)
                 # self.summary_writer.add_scalar('loss/train_loss', train_loss, 0)
@@ -169,28 +153,18 @@ class SegmentationNetwork(nn.Module):
                                 batch_size=self.params.val_batch,
                                 shuffle=self.params.shuffle,
                                 num_workers=self.params.dataloader_workers)
-        val_size = len(self.datasets['val'])
-        if val_size % self.params.val_batch != 0:
-            total_batch = val_size // self.params.val_batch + 1
-        else:
-            total_batch = val_size // self.params.val_batch
+        total_batch = self.get_total_batch('val')
 
         # validate through dataset
         for batch_idx, batch in enumerate(val_loader):
             self.pb.click(batch_idx, total_batch)
+            
             image, label = batch['image'], batch['label']
             if self.params.cuda_available:
                 image, label = image.cuda(), label.cuda()
 
-            # checkpoint split
-            if self.params.should_split:
-                image.requires_grad_()
-                out = checkpoint_sequential(self.network, self.params.split, image)
-            else:
-                out = self.network(image)
-
+            out = self.forward_split(image)
             loss = self.loss_fn(out, label)
-
             val_loss += loss.item()
 
             # record first loss
@@ -260,11 +234,8 @@ class SegmentationNetwork(nn.Module):
         test_loader = DataLoader(self.datasets['test'],
                                  batch_size=self.params.test_batch,
                                  shuffle=False, num_workers=self.params.dataloader_workers)
-        test_size = len(self.datasets['test'])
-        if test_size % self.params.test_batch != 0:
-            total_batch = test_size // self.params.test_batch + 1
-        else:
-            total_batch = test_size // self.params.test_batch
+        
+        total_batch = self.get_total_batch('test')
 
         # test for one epoch
         for batch_idx, batch in enumerate(test_loader):
@@ -273,11 +244,7 @@ class SegmentationNetwork(nn.Module):
             if self.params.cuda_available:
                 image, label = image.cuda(), label.cuda()
                 
-            if self.params.should_split:
-                image.requires_grad_()
-                out = checkpoint_sequential(self.network, self.params.split, image)
-            else:
-                out = self.network(image)
+            out = self.forward_split(image)
 
             for i in range(self.params.test_batch):
                 idx = batch_idx*self.params.test_batch+i
@@ -289,6 +256,29 @@ class SegmentationNetwork(nn.Module):
                 image_orig = image_orig.astype(np.uint8)
                 # self.summary_writer.add_image('test/img_%d/orig' % idx, image_orig, idx)
                 # self.summary_writer.add_image('test/img_%d/seg' % idx, color_map, idx)
+                
+    def get_total_batch(self, mode):
+        size = len(self.datasets[mode])
+        if mode == 'train':
+            batch_size = self.params.train_batch
+        elif mode == 'val':
+            batch_size = self.params.val_batch
+        elif mode == 'test':
+            batch_size = self.params.test_batch
+            
+        if size % batch_size != 0:
+            return size // batch_size + 1
+        else:
+            return size // batch_size
+            
+    
+    def forward_split(self, image):
+        if self.params.should_split:
+            image.requires_grad_()
+            out = checkpoint_sequential(self.network, self.params.split, image)
+        else:
+            out = self.network(image)
+        return out
 
     """##########################"""
     """# Model Save and Restore #"""

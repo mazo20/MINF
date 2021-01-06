@@ -9,7 +9,7 @@ SCRATCH_DISK = '/disk/scratch'
 SCRATCH_HOME = f'{SCRATCH_DISK}/{USER}'
 
 DATA_HOME = f'{SCRATCH_HOME}/deeplab/datasets/data'
-base_call = (f"python main.py  --data_root {DATA_HOME}/input --year 2012_aug --crop_val --batch_size 16 --output_stride 16")
+base_call = (f"python main.py  --data_root {DATA_HOME}/input --year 2012_aug --crop_val --batch_size 16 --output_stride 16 --gpu_id 0,1,2,3")
 
 repeats = 3
 #learning_rates = [10, 1, 1e-1, 1e-2]

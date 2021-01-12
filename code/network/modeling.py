@@ -5,12 +5,15 @@ from . import mobilenetv2
 
 def _segm_resnet(name, backbone_name, num_classes, output_stride, pretrained_backbone):
 
-    if output_stride==8:
+    if output_stride == 8:
         replace_stride_with_dilation=[False, True, True]
         aspp_dilate = [12, 24, 36]
-    else:
+    elif output_stride == 16:
         replace_stride_with_dilation=[False, False, True]
         aspp_dilate = [6, 12, 18]
+    else:
+        replace_stride_with_dilation=[False, False, False]
+        aspp_dilate = [3, 6, 9]
 
     backbone = resnet.__dict__[backbone_name](
         pretrained=pretrained_backbone,
@@ -33,10 +36,12 @@ def _segm_resnet(name, backbone_name, num_classes, output_stride, pretrained_bac
     return model
 
 def _segm_mobilenet(name, backbone_name, num_classes, output_stride, pretrained_backbone):
-    if output_stride==8:
+    if output_stride == 8:
         aspp_dilate = [12, 24, 36]
-    else:
+    elif output_stride == 16:
         aspp_dilate = [6, 12, 18]
+    else:
+        aspp_dilate = [3, 6, 9]
 
     backbone = mobilenetv2.mobilenet_v2(pretrained=pretrained_backbone, output_stride=output_stride)
     

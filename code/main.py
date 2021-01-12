@@ -74,8 +74,6 @@ def validate(opts, model, loader, device, metrics):
         denorm = utils.Denormalize(mean=[0.485, 0.456, 0.406], 
                                    std=[0.229, 0.224, 0.225])
         img_id = 0  
-    
-      
 
     with torch.no_grad():
         for images, labels in tqdm(loader):
@@ -154,6 +152,10 @@ def main():
     scheduler = utils.PolyLR(optimizer, opts.total_itrs, power=0.9)
     criterion = nn.CrossEntropyLoss(ignore_index=255, reduction='mean')
     
+    best_score = 0.0
+    cur_itrs = 0
+    cur_epochs = 0
+    
     # Load from checkpoint
     if opts.ckpt is not None and os.path.isfile(opts.ckpt):
         checkpoint = torch.load(opts.ckpt, map_location=torch.device('cpu'))
@@ -168,12 +170,7 @@ def main():
     model = nn.DataParallel(model)
     model.to(device)
     
-    
     # =====  Train  =====
-    
-    best_score = 0.0
-    cur_itrs = 0
-    cur_epochs = 0
     
     while True: 
         model.train()

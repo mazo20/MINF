@@ -188,8 +188,8 @@ def main():
             optimizer.step()
 
             if (cur_itrs) % opts.val_interval == 0:
-                save_ckpt('checkpoints/latest_%s_%s_os%d.pth' %
-                          (opts.model, opts.dataset, opts.output_stride))
+                save_ckpt('checkpoints/latest_%s_%s_os%d_%d.pth' %
+                          (opts.model, opts.dataset, opts.output_stride, opts.random_seed))
                 print("validation...")
                 model.eval()
                 val_score = validate(
@@ -197,8 +197,8 @@ def main():
                 print(metrics.to_str(val_score))
                 if val_score['Mean IoU'] > best_score:  # save best model
                     best_score = val_score['Mean IoU']
-                    save_ckpt('checkpoints/best_%s_%s_os%d.pth' %
-                              (opts.model, opts.dataset,opts.output_stride))
+                    save_ckpt('checkpoints/best_%s_%s_os%d_%d.pth' %
+                              (opts.model, opts.dataset,opts.output_stride, opts.random_seed))
 
                 model.train()
             scheduler.step()

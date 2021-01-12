@@ -28,7 +28,7 @@ print(f'Estimated time = {(nr_expts / nr_servers * avg_expt_time)/60} hrs')
 
 output_file = open("experiment.txt", "w")
 
-for crop, net, stride, rep in settings:
+for i, (crop, net, stride, rep) in enumerate(settings):
     # Note that we don't set a seed for rep - a seed is selected at random
     # and recorded in the output data by the python script
     expt_call = (
@@ -36,6 +36,7 @@ for crop, net, stride, rep in settings:
         f"--network {net} "
         f"--crop_size {crop} "
         f"--output_stride {stride}"
+        f"--random_seed {i}"
     )
     print(expt_call, file=output_file)
 

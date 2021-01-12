@@ -9,7 +9,7 @@ SCRATCH_DISK = '/disk/scratch'
 SCRATCH_HOME = f'{SCRATCH_DISK}/{USER}'
 
 DATA_HOME = f'{SCRATCH_HOME}/deeplab/datasets/data'
-base_call = (f"python main.py  --data_root {DATA_HOME}/input --year 2012_aug --crop_val --batch_size 16  --gpu_id 0,1,2,3")
+base_call = (f"python code/main.py  --data_root {DATA_HOME}/input --crop_val --batch_size 16  --gpu_id 0,1,2,3")
 
 repeats = 1
 strides = ['16', '32']
@@ -33,10 +33,10 @@ for i, (crop, net, stride, rep) in enumerate(settings):
     # and recorded in the output data by the python script
     expt_call = (
         f"{base_call} "
-        f"--network {net} "
+        f"--model {net} "
         f"--crop_size {crop} "
-        f"--output_stride {stride}"
-        f"--random_seed {i}"
+        f"--output_stride {stride} "
+        f"--random_seed {i} "
     )
     print(expt_call, file=output_file)
 

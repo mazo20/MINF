@@ -2,3 +2,5 @@
 datasets/
 
 __pycache__
+code/checkpoints
+code/results

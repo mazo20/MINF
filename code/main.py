@@ -60,6 +60,10 @@ def get_argparser():
 
     return args
 
+def mkdirs():
+    utils.mkdir('checkpoints')
+    utils.mkdir('results')
+
 def validate(opts, model, loader, device, metrics):
     model.eval()
     metrics.reset()
@@ -94,7 +98,21 @@ def validate(opts, model, loader, device, metrics):
     return score
 
 def main():
+    def save_ckpt(path):
+        """ save current model
+        """
+        torch.save({
+            "cur_itrs": cur_itrs,
+            "model_state": model.module.state_dict(),
+            "optimizer_state": optimizer.state_dict(),
+            "scheduler_state": scheduler.state_dict(),
+            "best_score": best_score,
+        }, path)
+        print("Model saved as %s" % path)
+        
+    
     opts = get_argparser()
+    mkdirs()
     
     # Setup CUDA devices
     os.environ['CUDA_VISIBLE_DEVICES'] = opts.gpu_id
@@ -128,8 +146,6 @@ def main():
     
     model = model_map[opts.model](num_classes=opts.num_classes, output_stride=opts.output_stride)
     
-    
-    
     # Set up optimizer and criterion
     optimizer = torch.optim.SGD(params=[
         {'params': model.backbone.parameters(), 'lr': 0.1*opts.lr},
@@ -137,18 +153,29 @@ def main():
     ], lr=opts.lr, momentum=0.9, weight_decay=opts.weight_decay)
     scheduler = utils.PolyLR(optimizer, opts.total_itrs, power=0.9)
     criterion = nn.CrossEntropyLoss(ignore_index=255, reduction='mean')
+    
+    # Load from checkpoint
+    if opts.ckpt is not None and os.path.isfile(opts.ckpt):
+        checkpoint = torch.load(opts.ckpt, map_location=torch.device('cpu'))
+        model.load_state_dict(checkpoint["model_state"])
+        optimizer.load_state_dict(checkpoint["optimizer_state"])
+        scheduler.load_state_dict(checkpoint["scheduler_state"])
+        cur_itrs = checkpoint["cur_itrs"]
+        best_score = checkpoint['best_score']
+        print("Model restored from %s" % opts.ckpt)
+        del checkpoint  # free memory 
         
     model = nn.DataParallel(model)
     model.to(device)
     
     
+    # =====  Train  =====
+    
     best_score = 0.0
     cur_itrs = 0
     cur_epochs = 0
-    interval_loss = 0
     
     while True: 
-        # =====  Train  =====
         model.train()
         cur_epochs += 1
         for (images, labels) in tqdm(train_loader):
@@ -162,9 +189,6 @@ def main():
             loss = criterion(outputs, labels)
             loss.backward()
             optimizer.step()
-
-            np_loss = loss.detach().cpu().numpy()
-            interval_loss += np_loss
 
             if (cur_itrs) % opts.val_interval == 0:
                 save_ckpt('checkpoints/latest_%s_%s_os%d.pth' %
@@ -183,7 +207,6 @@ def main():
             scheduler.step()
             
             if cur_itrs >= opts.total_itrs:
-                validate(opts, model, val_loader, device, metrics)
                 return
             
     

@@ -1,4 +1,4 @@
-python main.py  --data_root /disk/scratch/maciejkowalski/deeplab/datasets/data/input --year 2012_aug --crop_val --batch_size 16  --gpu_id 0,1,2,3 --network deeplabv3plus_mobilenet --crop_size 513 --output_stride 16--random_seed 0
-python main.py  --data_root /disk/scratch/maciejkowalski/deeplab/datasets/data/input --year 2012_aug --crop_val --batch_size 16  --gpu_id 0,1,2,3 --network deeplabv3plus_mobilenet --crop_size 513 --output_stride 32--random_seed 1
-python main.py  --data_root /disk/scratch/maciejkowalski/deeplab/datasets/data/input --year 2012_aug --crop_val --batch_size 16  --gpu_id 0,1,2,3 --network deeplabv3_mobilenet --crop_size 513 --output_stride 16--random_seed 2
-python main.py  --data_root /disk/scratch/maciejkowalski/deeplab/datasets/data/input --year 2012_aug --crop_val --batch_size 16  --gpu_id 0,1,2,3 --network deeplabv3_mobilenet --crop_size 513 --output_stride 32--random_seed 3
+python code/main.py  --data_root /disk/scratch/s1762992/deeplab/datasets/data/input --crop_val --batch_size 16  --gpu_id 0,1,2,3 --model deeplabv3plus_mobilenet --crop_size 513 --output_stride 16 --random_seed 0 
+python code/main.py  --data_root /disk/scratch/s1762992/deeplab/datasets/data/input --crop_val --batch_size 16  --gpu_id 0,1,2,3 --model deeplabv3plus_mobilenet --crop_size 513 --output_stride 32 --random_seed 1 
+python code/main.py  --data_root /disk/scratch/s1762992/deeplab/datasets/data/input --crop_val --batch_size 16  --gpu_id 0,1,2,3 --model deeplabv3_mobilenet --crop_size 513 --output_stride 16 --random_seed 2 
+python code/main.py  --data_root /disk/scratch/s1762992/deeplab/datasets/data/input --crop_val --batch_size 16  --gpu_id 0,1,2,3 --model deeplabv3_mobilenet --crop_size 513 --output_stride 32 --random_seed 3 

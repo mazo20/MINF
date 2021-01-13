@@ -89,8 +89,7 @@ def validate(opts, model, loader, device, metrics):
             if opts.save_val_results:
                 for i in range(len(images)):
                     utils.save_images(loader, images[i], targets[i], preds[i], denorm, img_id)
-                    img_id += 1
-            break
+                    img_id += 1 
                         
         score = metrics.get_results()
     return score

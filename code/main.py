@@ -46,6 +46,7 @@ def get_argparser():
     parser.add_argument("--weight_decay", type=float, default=1e-4, help='weight decay (default: 1e-4)')
     parser.add_argument("--random_seed", type=int, default=1, help="random seed (default: 1)")
     parser.add_argument("--val_interval", type=int, default=100, help="epoch interval for eval (default: 100)")
+    parser.add_argument("--count_flops", action="store_true", default=False)
     
     args = parser.parse_args()
     
@@ -146,7 +147,10 @@ def main():
         network.deeplab.convert_to_separable_conv(model.classifier)
     utils.set_bn_momentum(model.backbone, momentum=0.01)
     
-    print(utils.count_flops(model, opts.crop_size))
+    
+    if opts.count_flops:
+        print(utils.count_flops(model, opts.crop_size))
+        return
     
     # Set up optimizer and criterion
     optimizer = torch.optim.SGD(params=[
@@ -163,7 +167,6 @@ def main():
     # Load from checkpoint
     if opts.ckpt is not None and os.path.isfile(opts.ckpt):
         checkpoint = torch.load(opts.ckpt, map_location=torch.device('cpu'))
-        print(checkpoint)
         model.load_state_dict(checkpoint["model_state"])
         model = nn.DataParallel(model)
         model.to(device)

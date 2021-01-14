@@ -146,6 +146,8 @@ def main():
         network.deeplab.convert_to_separable_conv(model.classifier)
     utils.set_bn_momentum(model.backbone, momentum=0.01)
     
+    print(utils.count_flops(model, opts.crop_size))
+    
     # Set up optimizer and criterion
     optimizer = torch.optim.SGD(params=[
         {'params': model.backbone.parameters(), 'lr': 0.1*opts.lr},
@@ -174,7 +176,6 @@ def main():
         model = nn.DataParallel(model)
         model.to(device)
         
-    print(utils.count_flops(model, opts.crop_size))
     
     # =====  Train  =====
     

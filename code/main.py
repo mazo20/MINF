@@ -163,6 +163,7 @@ def main():
     # Load from checkpoint
     if opts.ckpt is not None and os.path.isfile(opts.ckpt):
         checkpoint = torch.load(opts.ckpt, map_location=torch.device('cpu'))
+        print(checkpoint)
         model.load_state_dict(checkpoint["model_state"])
         model = nn.DataParallel(model)
         model.to(device)
@@ -182,6 +183,7 @@ def main():
     while True: 
         model.train()
         cur_epochs += 1
+        print("Epoch: {cur_epochs}")
         for (images, labels) in tqdm(train_loader):
             cur_itrs += 1
 

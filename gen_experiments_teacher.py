@@ -13,7 +13,7 @@ base_call = (f"python code/main.py  --data_root {DATA_HOME}/input --crop_val --b
 
 repeats = 1
 strides = ['16', '32']
-nets = ['deeplabv3plus_mobilenet', 'deeplabv3_mobilenet']
+nets = ['deeplabv3plus_resnet50', 'deeplabv3_resnet50']
 crop_size = ['513']
 
 

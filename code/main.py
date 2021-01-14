@@ -186,7 +186,7 @@ def main():
     while True: 
         model.train()
         cur_epochs += 1
-        print("Epoch: {cur_epochs}")
+        print(f"Epoch: {cur_epochs}")
         for (images, labels) in tqdm(train_loader):
             cur_itrs += 1
 

@@ -31,7 +31,7 @@ def _segm_resnet(name, backbone_name, num_classes, output_stride, pretrained_bac
         
     
     backbone = IntermediateLayerGetter(backbone, return_layers=return_layers)
-
+    
     model = DeepLabV3(backbone, classifier)
     return model
 

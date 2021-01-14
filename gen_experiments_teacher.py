@@ -37,6 +37,7 @@ for i, (crop, net, stride, rep) in enumerate(settings):
         f"--crop_size {crop} "
         f"--output_stride {stride} "
         f"--random_seed {i} "
+        f"--ckpt checkpoints/best_{net}_voc_os{stride}_{i}.pth"
     )
     print(expt_call, file=output_file)
 

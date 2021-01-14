@@ -1,5 +1,6 @@
 
 datasets/
+results/
 
 __pycache__
 code/results

@@ -9,11 +9,11 @@ SCRATCH_DISK = '/disk/scratch'
 SCRATCH_HOME = f'{SCRATCH_DISK}/{USER}'
 
 DATA_HOME = f'{SCRATCH_HOME}/deeplab/datasets/data'
-base_call = (f"python code/main.py  --data_root {DATA_HOME}/input --crop_val --batch_size 16  --gpu_id 0,1,2,3")
+base_call = (f"python code/main.py  --data_root {DATA_HOME}/input --crop_val --batch_size 16  --gpu_id 0,1,2,3 --separable_conv")
 
 repeats = 1
 strides = ['16', '32']
-nets = ['deeplabv3plus_resnet50', 'deeplabv3_resnet50']
+nets = ['deeplabv3plus_mobilenet', 'deeplabv3plus_resnet50']
 crop_size = ['513']
 
 

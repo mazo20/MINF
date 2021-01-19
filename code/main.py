@@ -28,7 +28,7 @@ def get_argparser():
     # Train Options
     parser.add_argument("--test_only", action='store_true', default=False)
     parser.add_argument("--save_val_results", action='store_true', default=False, help="save segmentation results to \"./results\"")
-    parser.add_argument("--total_itrs", type=int, default=30e3, help="epoch number (default: 30k)")
+    parser.add_argument("--total_epochs", type=int, default=30, help="Number of epochs per training")
     parser.add_argument("--lr", type=float, default=0.01, help="learning rate (default: 0.01)")
     parser.add_argument("--lr_policy", type=str, default='poly', choices=['poly', 'step'], help="learning rate scheduler policy")
     parser.add_argument("--step_size", type=int, default=10000)
@@ -37,9 +37,13 @@ def get_argparser():
     parser.add_argument("--val_batch_size", type=int, default=4, help='batch size for validation (default: 4)')
     parser.add_argument("--crop_size", type=int, default=513)
     parser.add_argument("--num_workers", type=int, default=2, help='number of workers loading the data')
+    parser.add_argument('--temperature', default=4, type=float, help='temp for KD')
+    parser.add_argument('--alpha', default=0.0, type=float, help='alpha for KD')
+    parser.add_argument('--aux_loss', default='AT', type=str, help='AT or SE loss')
     
     parser.add_argument("--ckpt", default=None, type=str,help="restore from checkpoint")
     parser.add_argument("--continue_training", action='store_true', default=False)
+    parser.add_argument("--mode", type=str, default="teacher", choices=["teacher", "student"], help="training mode")
 
     parser.add_argument("--loss_type", type=str, default='cross_entropy',choices=['cross_entropy', 'focal_loss'], help="loss type (default: False)")
     parser.add_argument("--gpu_id", type=str, default='0', help="GPU ID")
@@ -66,6 +70,10 @@ def mkdirs():
     utils.mkdir('results')
 
 def validate(opts, model, loader, device, metrics):
+    save_ckpt('checkpoints/latest_%s_%s_os%d_%d.pth' %
+                    (opts.model, opts.dataset, opts.output_stride, opts.random_seed))
+    print("validation...")
+    
     model.eval()
     metrics.reset()
     
@@ -93,6 +101,12 @@ def validate(opts, model, loader, device, metrics):
                     img_id += 1 
                         
         score = metrics.get_results()
+    print(metrics.to_str(val_score))
+    if val_score['Mean IoU'] > best_score:  # save best model
+        best_score = val_score['Mean IoU']
+        save_ckpt('checkpoints/best_%s_%s_os%d_%d.pth' %
+                    (opts.model, opts.dataset,opts.output_stride, opts.random_seed))    
+    model.train()
     return score
 
 def main():
@@ -109,6 +123,117 @@ def main():
         print("Model saved as %s" % path)
         
     
+    # Set up model
+    model_map = {
+        'deeplabv3_resnet50': network.deeplabv3_resnet50,
+        'deeplabv3plus_resnet50': network.deeplabv3plus_resnet50,
+        'deeplabv3_resnet101': network.deeplabv3_resnet101,
+        'deeplabv3plus_resnet101': network.deeplabv3plus_resnet101,
+        'deeplabv3_mobilenet': network.deeplabv3_mobilenet,
+        'deeplabv3plus_mobilenet': network.deeplabv3plus_mobilenet
+    }
+    
+    model = model_map[opts.model](num_classes=opts.num_classes, output_stride=opts.output_stride)
+    teacher = None
+    if opts.separable_conv and 'plus' in opts.model:
+        network.deeplab.convert_to_separable_conv(model.classifier)
+    utils.set_bn_momentum(model.backbone, momentum=0.01)
+    
+    
+    if opts.count_flops:
+        print(utils.count_flops(model, opts.crop_size))
+        return
+    
+    # Set up optimizer and criterion
+    optimizer = torch.optim.SGD(params=[
+        {'params': model.backbone.parameters(), 'lr': 0.1*opts.lr},
+        {'params': model.classifier.parameters(), 'lr': opts.lr},
+    ], lr=opts.lr, momentum=0.9, weight_decay=opts.weight_decay)
+    scheduler = utils.PolyLR(optimizer, opts.total_epochs * len(val_loader), power=0.9)
+    criterion = nn.CrossEntropyLoss(ignore_index=255, reduction='mean')
+    
+    best_score = 0.0
+    cur_itrs = 0
+    cur_epochs = 0
+    
+    # Load from checkpoint
+    if opts.ckpt is not None and os.path.isfile(opts.ckpt):
+        checkpoint = torch.load(opts.ckpt, map_location=torch.device('cpu'))
+        model.load_state_dict(checkpoint["model_state"])
+        model = nn.DataParallel(model)
+        model.to(device)
+        optimizer.load_state_dict(checkpoint["optimizer_state"])
+        scheduler.load_state_dict(checkpoint["scheduler_state"])
+        cur_itrs = checkpoint["cur_itrs"]
+        best_score = checkpoint['best_score']
+        print("Model restored from %s" % opts.ckpt)
+        del checkpoint  # free memory 
+    else:
+        model = nn.DataParallel(model)
+        model.to(device)
+    
+    if opts.mode == "student":
+        teacher = model_map[opts.model](num_classes=opts.num_classes, output_stride=opts.output_stride)
+        if opts.separable_conv and 'plus' in opts.model:
+            network.deeplab.convert_to_separable_conv(model.classifier)
+            
+        checkpoint = torch.load(opts.ckpt, map_location=torch.device('cpu'))
+        teacher.load_state_dict(checkpoint["model_state"])
+        teacher = nn.DataParallel(teacher)
+        teacher.to(device)
+        for param in teacher.parameters():
+            param.requires_grad = False
+    
+    # =====  Train  =====
+    
+    for epoch in tqdm(range(cur_epochs, opts.total_epochs)):
+        cur_epochs += 1
+        print(f"Epoch: {epoch}")
+        
+        if opts.mode == "teacher":
+            train_teacher(model, optimizer, criterion)
+        else:
+            train_student(model, teacher, optimizer)
+        
+        scheduler.step()
+        
+        #Save    
+        validate(opts=opts, model=model, loader=val_loader, device=device, metrics=metrics)
+        
+
+def train_teacher(net, optimizer, criterion):
+    net.train()
+    for (images, labels) in tqdm(train_loader):
+        images = images.to(device, dtype=torch.float32)
+        labels = labels.to(device, dtype=torch.long)
+
+        
+        outputs = net(images)
+        loss = criterion(outputs, labels)
+        
+        optimizer.zero_grad()
+        loss.backward()
+        optimizer.step()
+        
+            
+def train_student(net, teacher, optimizer):
+    net.train()
+    for (images, labels) in tqdm(train_loader):
+        images = images.to(device, dtype=torch.float32)
+        labels = labels.to(device, dtype=torch.long)
+        
+        outputs_student = net(images)
+        outputs_teacher = teacher(images)
+        
+        # If alpha is 0 then this loss is just a cross entropy.
+        loss = utils.distillation(outputs_student, outputs_teacher, labels, opts.temperature, opts.alpha)
+        
+        optimizer.zero_grad()
+        loss.backward()
+        optimizer.step()
+    
+
+if __name__ == '__main__':
     opts = get_argparser()
     mkdirs()
     
@@ -132,94 +257,4 @@ def main():
     # Set up metrics
     metrics = utils.StreamSegMetrics(opts.num_classes)
     
-    # Set up model
-    model_map = {
-        'deeplabv3_resnet50': network.deeplabv3_resnet50,
-        'deeplabv3plus_resnet50': network.deeplabv3plus_resnet50,
-        'deeplabv3_resnet101': network.deeplabv3_resnet101,
-        'deeplabv3plus_resnet101': network.deeplabv3plus_resnet101,
-        'deeplabv3_mobilenet': network.deeplabv3_mobilenet,
-        'deeplabv3plus_mobilenet': network.deeplabv3plus_mobilenet
-    }
-    
-    model = model_map[opts.model](num_classes=opts.num_classes, output_stride=opts.output_stride)
-    if opts.separable_conv and 'plus' in opts.model:
-        network.deeplab.convert_to_separable_conv(model.classifier)
-    utils.set_bn_momentum(model.backbone, momentum=0.01)
-    
-    
-    if opts.count_flops:
-        print(utils.count_flops(model, opts.crop_size))
-        return
-    
-    # Set up optimizer and criterion
-    optimizer = torch.optim.SGD(params=[
-        {'params': model.backbone.parameters(), 'lr': 0.1*opts.lr},
-        {'params': model.classifier.parameters(), 'lr': opts.lr},
-    ], lr=opts.lr, momentum=0.9, weight_decay=opts.weight_decay)
-    scheduler = utils.PolyLR(optimizer, opts.total_itrs, power=0.9)
-    criterion = nn.CrossEntropyLoss(ignore_index=255, reduction='mean')
-    
-    best_score = 0.0
-    cur_itrs = 0
-    cur_epochs = 0
-    
-    # Load from checkpoint
-    if opts.ckpt is not None and os.path.isfile(opts.ckpt):
-        checkpoint = torch.load(opts.ckpt, map_location=torch.device('cpu'))
-        model.load_state_dict(checkpoint["model_state"])
-        model = nn.DataParallel(model)
-        model.to(device)
-        optimizer.load_state_dict(checkpoint["optimizer_state"])
-        scheduler.load_state_dict(checkpoint["scheduler_state"])
-        cur_itrs = checkpoint["cur_itrs"]
-        best_score = checkpoint['best_score']
-        print("Model restored from %s" % opts.ckpt)
-        del checkpoint  # free memory 
-    else:
-        model = nn.DataParallel(model)
-        model.to(device)
-        
-    
-    # =====  Train  =====
-    
-    while True: 
-        model.train()
-        cur_epochs += 1
-        print(f"Epoch: {cur_epochs}")
-        for (images, labels) in tqdm(train_loader):
-            cur_itrs += 1
-
-            images = images.to(device, dtype=torch.float32)
-            labels = labels.to(device, dtype=torch.long)
-
-            optimizer.zero_grad()
-            outputs = model(images)
-            loss = criterion(outputs, labels)
-            loss.backward()
-            optimizer.step()
-
-            if (cur_itrs) % opts.val_interval == 0:
-                save_ckpt('checkpoints/latest_%s_%s_os%d_%d.pth' %
-                          (opts.model, opts.dataset, opts.output_stride, opts.random_seed))
-                print("validation...")
-                model.eval()
-                val_score = validate(
-                    opts=opts, model=model, loader=val_loader, device=device, metrics=metrics)
-                print(metrics.to_str(val_score))
-                if val_score['Mean IoU'] > best_score:  # save best model
-                    best_score = val_score['Mean IoU']
-                    save_ckpt('checkpoints/best_%s_%s_os%d_%d.pth' %
-                              (opts.model, opts.dataset,opts.output_stride, opts.random_seed))
-
-                model.train()
-            scheduler.step()
-            
-            if cur_itrs >= opts.total_itrs:
-                return
-            
-    
-    
-
-if __name__ == '__main__':
     main()

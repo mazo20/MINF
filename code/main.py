@@ -70,6 +70,18 @@ def mkdirs():
     utils.mkdir('results')
 
 def validate(opts, model, loader, device, metrics):
+    def save_ckpt(path):
+        """ save current model
+        """
+        torch.save({
+            "cur_itrs": cur_itrs,
+            "model_state": model.module.state_dict(),
+            "optimizer_state": optimizer.state_dict(),
+            "scheduler_state": scheduler.state_dict(),
+            "best_score": best_score,
+        }, path)
+        print("Model saved as %s" % path)
+        
     save_ckpt('checkpoints/latest_%s_%s_os%d_%d.pth' %
                     (opts.model, opts.dataset, opts.output_stride, opts.random_seed))
     print("validation...")
@@ -101,26 +113,16 @@ def validate(opts, model, loader, device, metrics):
                     img_id += 1 
                         
         score = metrics.get_results()
-    print(metrics.to_str(val_score))
-    if val_score['Mean IoU'] > best_score:  # save best model
-        best_score = val_score['Mean IoU']
+    print(metrics.to_str(score))
+    if score['Mean IoU'] > best_score:  # save best model
+        best_score = score['Mean IoU']
         save_ckpt('checkpoints/best_%s_%s_os%d_%d.pth' %
                     (opts.model, opts.dataset,opts.output_stride, opts.random_seed))    
     model.train()
     return score
 
 def main():
-    def save_ckpt(path):
-        """ save current model
-        """
-        torch.save({
-            "cur_itrs": cur_itrs,
-            "model_state": model.module.state_dict(),
-            "optimizer_state": optimizer.state_dict(),
-            "scheduler_state": scheduler.state_dict(),
-            "best_score": best_score,
-        }, path)
-        print("Model saved as %s" % path)
+    
         
     
     # Set up model
@@ -258,3 +260,5 @@ if __name__ == '__main__':
     metrics = utils.StreamSegMetrics(opts.num_classes)
     
     main()
+    
+    python code/main.py  --data_root /disk/scratch/s1762992/deeplab/datasets/data/input --crop_val --batch_size 16  --gpu_id 0,1,2,3 --model deeplabv3_mobilenet --crop_size 513 --output_stride 32 --mode student --ckpt checkpoints/best_deeplabv3_mobilenet_voc_os32_3.pth

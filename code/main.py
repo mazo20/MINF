@@ -69,8 +69,7 @@ def mkdirs():
     utils.mkdir('checkpoints')
     utils.mkdir('results')
 
-def validate(model, optimizer, scheduler):
-    print("Validation...")
+def validate(model, optimizer, scheduler, best_score):
     
     model.eval()
     metrics.reset()
@@ -179,7 +178,7 @@ def main():
         
         scheduler.step()
         
-        validate(model, optimizer, scheduler)
+        validate(model, optimizer, scheduler, best_score)
         
 
 def train_teacher(net, optimizer, criterion):
@@ -215,7 +214,7 @@ def train_student(net, teacher, optimizer):
         
         loss = utils.distillation(outputs_student, outputs_teacher, labels, opts.temperature, opts.alpha)
         
-        preds = outputs.detach().max(dim=1)[1].cpu().numpy()
+        preds = outputs_student.detach().max(dim=1)[1].cpu().numpy()
         targets = labels.cpu().numpy()
         metrics.update(targets, preds)
         score = metrics.get_results()

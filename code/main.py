@@ -185,7 +185,7 @@ def train_teacher(net, optimizer, criterion):
     net.train()
     metrics.reset()
     pbar = tqdm(train_loader)
-    for i, (images, labels) in enumerate(pbar):
+    for images, labels in pbar:
         images = images.to(device, dtype=torch.float32)
         labels = labels.to(device, dtype=torch.long)
         
@@ -205,7 +205,8 @@ def train_teacher(net, optimizer, criterion):
             
 def train_student(net, teacher, optimizer):
     net.train()
-    for (images, labels) in tqdm(train_loader):
+    pbar = tqdm(train_loader)
+    for images, labels in pbar:
         images = images.to(device, dtype=torch.float32)
         labels = labels.to(device, dtype=torch.long)
         

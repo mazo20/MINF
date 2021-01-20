@@ -179,7 +179,7 @@ def main():
         
         scheduler.step()
         
-        validate(opts=opts, model=model, loader=val_loader, device=device, metrics=metrics)
+        validate(model, optimizer, scheduler)
         
 
 def train_teacher(net, optimizer, criterion):

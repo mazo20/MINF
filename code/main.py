@@ -99,10 +99,10 @@ def validate(model, optimizer, scheduler):
         score = metrics.get_results()
         print(metrics.to_str(score))
         
-    save_ckpt('checkpoints/latest', opts, model, optimizer, scheduler, best_score, cur_epochs)   
+    utils.save_ckpt('checkpoints/latest', opts, model, optimizer, scheduler, best_score, cur_epochs)   
     if score['Mean IoU'] > best_score:  # save best model
         best_score = score['Mean IoU']
-        save_ckpt('checkpoints/best', opts, model, optimizer, scheduler, best_score, cur_epochs)   
+        utils.save_ckpt('checkpoints/best', opts, model, optimizer, scheduler, best_score, cur_epochs)   
     
     model.train()
 
@@ -242,8 +242,8 @@ if __name__ == '__main__':
     
     # Setup dataloader
     train_dst, val_dst = get_dataset(opts)
-    train_loader = data.DataLoader(train_dst, batch_size=opts.batch_size, shuffle=True, num_workers=2)
-    val_loader = data.DataLoader(val_dst, batch_size=opts.val_batch_size, shuffle=True, num_workers=2)
+    train_loader = data.DataLoader(train_dst, batch_size=opts.batch_size, shuffle=True, num_workers=4)
+    val_loader = data.DataLoader(val_dst, batch_size=opts.val_batch_size, shuffle=True, num_workers=4)
     print("Dataset: %s, Train set: %d, Val set: %d" %
           (opts.dataset, len(train_dst), len(val_dst)))
     

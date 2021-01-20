@@ -38,10 +38,11 @@ def get_argparser():
     parser.add_argument("--crop_size", type=int, default=513)
     parser.add_argument("--num_workers", type=int, default=2, help='number of workers loading the data')
     parser.add_argument('--temperature', default=4, type=float, help='temp for KD')
-    parser.add_argument('--alpha', default=0.0, type=float, help='alpha for KD')
+    parser.add_argument('--alpha', default=0.9, type=float, help='alpha for KD')
     parser.add_argument('--aux_loss', default='AT', type=str, help='AT or SE loss')
     
     parser.add_argument("--ckpt", default=None, type=str,help="restore from checkpoint")
+    parser.add_argument("--teacher_ckpt", default=None, type=str,help="restore teacher from checkpoint")
     parser.add_argument("--continue_training", action='store_true', default=False)
     parser.add_argument("--mode", type=str, default="teacher", choices=["teacher", "student"], help="training mode")
 
@@ -69,7 +70,7 @@ def mkdirs():
     utils.mkdir('checkpoints')
     utils.mkdir('results')
 
-def validate(model, optimizer, scheduler, best_score):
+def validate(model, optimizer, scheduler, best_score, cur_epochs):
     
     model.eval()
     metrics.reset()
@@ -158,7 +159,7 @@ def main():
         if opts.separable_conv and 'plus' in opts.model:
             network.deeplab.convert_to_separable_conv(model.classifier)
             
-        checkpoint = torch.load(opts.ckpt, map_location=torch.device('cpu'))
+        checkpoint = torch.load(opts.teacher_ckpt, map_location=torch.device('cpu'))
         teacher.load_state_dict(checkpoint["model_state"])
         teacher = nn.DataParallel(teacher)
         teacher.to(device)
@@ -178,7 +179,7 @@ def main():
         
         scheduler.step()
         
-        validate(model, optimizer, scheduler, best_score)
+        validate(model, optimizer, scheduler, best_score, cur_epochs)
         
 
 def train_teacher(net, optimizer, criterion):

@@ -69,7 +69,7 @@ def mkdirs():
     utils.mkdir('checkpoints')
     utils.mkdir('results')
 
-def validate(opts, model, loader, device, metrics, optimizer, scheduler):
+def validate(model, optimizer, scheduler):
     print("Validation...")
     
     model.eval()
@@ -81,7 +81,7 @@ def validate(opts, model, loader, device, metrics, optimizer, scheduler):
         img_id = 0  
 
     with torch.no_grad():
-        for images, labels in tqdm(loader):
+        for images, labels in tqdm(val_loader):
             images = images.to(device, dtype=torch.float32)
             labels = labels.to(device, dtype=torch.long)
             
@@ -93,7 +93,7 @@ def validate(opts, model, loader, device, metrics, optimizer, scheduler):
             
             if opts.save_val_results:
                 for i in range(len(images)):
-                    utils.save_images(loader, images[i], targets[i], preds[i], denorm, img_id)
+                    utils.save_images(val_loader, images[i], targets[i], preds[i], denorm, img_id)
                     img_id += 1 
                         
         score = metrics.get_results()

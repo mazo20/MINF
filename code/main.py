@@ -34,7 +34,7 @@ def get_argparser():
     parser.add_argument("--step_size", type=int, default=10000)
     parser.add_argument("--crop_val", action='store_true', default=False, help='crop validation (default: False)')
     parser.add_argument("--batch_size", type=int, default=16, help='batch size (default: 16)')
-    parser.add_argument("--val_batch_size", type=int, default=4, help='batch size for validation (default: 4)')
+    parser.add_argument("--val_batch_size", type=int, default=8, help='batch size for validation (default: 4)')
     parser.add_argument("--crop_size", type=int, default=513)
     parser.add_argument("--num_workers", type=int, default=2, help='number of workers loading the data')
     parser.add_argument('--temperature', default=4, type=float, help='temp for KD')
@@ -155,7 +155,7 @@ def main():
         model.to(device)
     
     if opts.mode == "student":
-        teacher = model_map[opts.model](num_classes=opts.num_classes, output_stride=opts.output_stride)
+        teacher = model_map[opts.model](num_classes=opts.num_classes, output_stride=16)
         if opts.separable_conv and 'plus' in opts.model:
             network.deeplab.convert_to_separable_conv(model.classifier)
             
@@ -170,7 +170,6 @@ def main():
     
     for epoch in tqdm(range(cur_epochs, opts.total_epochs)):
         cur_epochs += 1
-        print(f"Epoch: {epoch}")
         
         if opts.mode == "teacher":
             train_teacher(model, optimizer, criterion)

@@ -122,7 +122,7 @@ def main():
     
     model = model_map[opts.model](num_classes=opts.num_classes, output_stride=opts.output_stride)
     teacher = None
-    if opts.separable_conv and opts.mode == 'teacher': #and 'plus' in opts.model:
+    if opts.separable_conv: #and 'plus' in opts.model:
         network.deeplab.convert_to_separable_conv(model.classifier)
     utils.set_bn_momentum(model.backbone, momentum=0.01)
     
@@ -156,8 +156,6 @@ def main():
     
     if opts.mode == "student":
         teacher = model_map[opts.model](num_classes=opts.num_classes, output_stride=16)
-        if opts.separable_conv:
-            network.deeplab.convert_to_separable_conv(teacher.classifier)
             
         checkpoint = torch.load(opts.teacher_ckpt, map_location=torch.device('cpu'))
         teacher.load_state_dict(checkpoint["model_state"])

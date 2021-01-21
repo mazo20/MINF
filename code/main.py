@@ -156,8 +156,8 @@ def main():
     
     if opts.mode == "student":
         teacher = model_map[opts.model](num_classes=opts.num_classes, output_stride=16)
-        if opts.separable_conv and 'plus' in opts.model:
-            network.deeplab.convert_to_separable_conv(model.classifier)
+        if opts.separable_conv:
+            network.deeplab.convert_to_separable_conv(teacher.classifier)
             
         checkpoint = torch.load(opts.teacher_ckpt, map_location=torch.device('cpu'))
         teacher.load_state_dict(checkpoint["model_state"])

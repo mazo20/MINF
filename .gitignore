@@ -1,7 +1,7 @@
 
 datasets/
 results/
-experiment.txt
 
 __pycache__
 code/results
+experiment.txt

@@ -122,7 +122,7 @@ def main():
     
     model = model_map[opts.model](num_classes=opts.num_classes, output_stride=opts.output_stride)
     teacher = None
-    if opts.separable_conv and 'plus' in opts.model:
+    if opts.separable_conv and opts.mode == 'teacher': #and 'plus' in opts.model:
         network.deeplab.convert_to_separable_conv(model.classifier)
     utils.set_bn_momentum(model.backbone, momentum=0.01)
     
@@ -146,7 +146,7 @@ def main():
         model.to(device)
         optimizer.load_state_dict(checkpoint["optimizer_state"])
         scheduler.load_state_dict(checkpoint["scheduler_state"])
-        cur_itrs = checkpoint["cur_itrs"]
+        cur_epochs = checkpoint["cur_epochs"]
         best_score = checkpoint['best_score']
         print("Model restored from %s" % opts.ckpt)
         del checkpoint  # free memory 
@@ -249,8 +249,6 @@ if __name__ == '__main__':
     
     # Set up metrics
     metrics = utils.StreamSegMetrics(opts.num_classes)
-    
-    
     
     main()
     

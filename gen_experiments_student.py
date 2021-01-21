@@ -21,7 +21,7 @@ separable = ['--separable']
 config = {
     '--output_stride': ['16', '32'],
     '--model': ['deeplabv3plus_mobilenet'],
-    '--separable_conv': ['False', 'True'],
+    '': ['--separable_conv', ''],
     '--mode': ['student'],
     '--batch_size': ['16'], 
     '--crop_size': ['513'],

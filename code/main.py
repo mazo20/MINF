@@ -5,6 +5,7 @@ import torch
 import utils
 from torch.utils import data
 import torch.nn as nn
+from torch.autograd import Variable
 import numpy as np
 import random
 from dataset import *
@@ -19,9 +20,11 @@ def get_argparser():
     parser.add_argument("--num_classes", type=int, default=None, help="num classes (default: None)")
 
     # Deeplab Options
-    parser.add_argument("--model", type=str, default='deeplabv3plus_mobilenet',choices=['deeplabv3_resnet50',  'deeplabv3plus_resnet50',
-                                 'deeplabv3_resnet101', 'deeplabv3plus_resnet101',
-                                 'deeplabv3_mobilenet', 'deeplabv3plus_mobilenet'], help='model name')
+    parser.add_argument("--model", type=str, default='v3plus_mobilenet',choices=['v3_resnet50',  'v3plus_resnet50',
+                                 'v3_resnet101', 'v3plus_resnet101', 'v3_mobilenet', 'v3plus_mobilenet'], help='model name')
+    parser.add_argument("--teacher_model", type=str, default='v3plus_mobilenet',choices=['v3_resnet50',  'v3plus_resnet50',
+                                 'v3_resnet101', 'v3plus_resnet101', 'v3_mobilenet', 'v3plus_mobilenet'], help='model name')
+    
     parser.add_argument("--separable_conv", action='store_true', default=False,help="apply separable conv to decoder and aspp")
     parser.add_argument("--output_stride", type=int, default=16, choices=[8, 16, 32])
 
@@ -39,6 +42,7 @@ def get_argparser():
     parser.add_argument("--num_workers", type=int, default=2, help='number of workers loading the data')
     parser.add_argument('--temperature', default=4, type=float, help='temp for KD')
     parser.add_argument('--alpha', default=0.9, type=float, help='alpha for KD')
+    parser.add_argument('--beta', default=1e3, type=float, help='beta for AT')
     parser.add_argument('--aux_loss', default='AT', type=str, help='AT or SE loss')
     
     parser.add_argument("--ckpt", default=None, type=str,help="restore from checkpoint")
@@ -109,12 +113,12 @@ def validate(model, optimizer, scheduler, best_score, cur_epochs):
 def main():
     # Set up model
     model_map = {
-        'deeplabv3_resnet50': network.deeplabv3_resnet50,
-        'deeplabv3plus_resnet50': network.deeplabv3plus_resnet50,
-        'deeplabv3_resnet101': network.deeplabv3_resnet101,
-        'deeplabv3plus_resnet101': network.deeplabv3plus_resnet101,
-        'deeplabv3_mobilenet': network.deeplabv3_mobilenet,
-        'deeplabv3plus_mobilenet': network.deeplabv3plus_mobilenet
+        'v3_resnet50': network.deeplabv3_resnet50,
+        'v3plus_resnet50': network.deeplabv3plus_resnet50,
+        'v3_resnet101': network.deeplabv3_resnet101,
+        'v3plus_resnet101': network.deeplabv3plus_resnet101,
+        'v3_mobilenet': network.deeplabv3_mobilenet,
+        'v3plus_mobilenet': network.deeplabv3plus_mobilenet
     }
     
     best_score = 0.0
@@ -146,7 +150,7 @@ def main():
         model.to(device)
         optimizer.load_state_dict(checkpoint["optimizer_state"])
         scheduler.load_state_dict(checkpoint["scheduler_state"])
-        cur_epochs = checkpoint["cur_epochs"]
+        cur_epochs = checkpoint.get("cur_epochs", 0)
         best_score = checkpoint['best_score']
         print("Model restored from %s" % opts.ckpt)
         del checkpoint  # free memory 
@@ -155,7 +159,7 @@ def main():
         model.to(device)
     
     if opts.mode == "student":
-        teacher = model_map[opts.model](num_classes=opts.num_classes, output_stride=16)
+        teacher = model_map[opts.teacher_model](num_classes=opts.num_classes, output_stride=16)
             
         checkpoint = torch.load(opts.teacher_ckpt, map_location=torch.device('cpu'))
         teacher.load_state_dict(checkpoint["model_state"])
@@ -188,6 +192,7 @@ def train_teacher(net, optimizer, criterion):
         labels = labels.to(device, dtype=torch.long)
         
         outputs = net(images)
+        print(outputs.shape)
         loss = criterion(outputs, labels)
         
         preds = outputs.detach().max(dim=1)[1].cpu().numpy()
@@ -205,13 +210,17 @@ def train_student(net, teacher, optimizer):
     net.train()
     pbar = tqdm(train_loader)
     for images, labels in pbar:
-        images = images.to(device, dtype=torch.float32)
-        labels = labels.to(device, dtype=torch.long)
+        images = Variable(images.to(device, dtype=torch.float32))
+        labels = Variable(labels.to(device, dtype=torch.long))
         
-        outputs_student = net(images)
-        outputs_teacher = teacher(images)
+        outputs_student, ints_student = net(images)
+        outputs_teacher, ints_teacher = teacher(images)
         
         loss = utils.distillation(outputs_student, outputs_teacher, labels, opts.temperature, opts.alpha)
+        
+        adjusted_beta = (opts.beta*3)/len(ints_student)
+        for i in range(len(ints_student)):
+            loss += adjusted_beta * utils.at_loss(ints_student[i], ints_teacher[i])
         
         preds = outputs_student.detach().max(dim=1)[1].cpu().numpy()
         targets = labels.cpu().numpy()

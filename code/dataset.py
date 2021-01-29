@@ -16,20 +16,13 @@ def get_dataset(opts):
             et.ExtNormalize(mean=[0.485, 0.456, 0.406],
                             std=[0.229, 0.224, 0.225]),
         ])
-        if opts.crop_val:
-            val_transform = et.ExtCompose([
-                et.ExtResize(opts.crop_size),
-                et.ExtCenterCrop(opts.crop_size),
-                et.ExtToTensor(),
-                et.ExtNormalize(mean=[0.485, 0.456, 0.406],
-                                std=[0.229, 0.224, 0.225]),
-            ])
-        else:
-            val_transform = et.ExtCompose([
-                et.ExtToTensor(),
-                et.ExtNormalize(mean=[0.485, 0.456, 0.406],
-                                std=[0.229, 0.224, 0.225]),
-            ])
+        val_transform = et.ExtCompose([
+            et.ExtResize(opts.crop_size),
+            et.ExtCenterCrop(opts.crop_size),
+            et.ExtToTensor(),
+            et.ExtNormalize(mean=[0.485, 0.456, 0.406],
+                            std=[0.229, 0.224, 0.225]),
+        ])
         train_dst = VOCSegmentation(root=opts.data_root, year='2012',
                                     image_set='train', transform=train_transform)
         val_dst = VOCSegmentation(root=opts.data_root, year='2012',

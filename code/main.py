@@ -63,10 +63,6 @@ def get_argparser():
         args.num_classes = 21
     elif args.dataset.lower() == 'cityscapes':
         args.num_classes = 19
-      
-    # If image has different size we cannot use batch > 1  
-    if args.dataset=='voc' and not args.crop_val:
-        args.val_batch_size = 1
 
     return args
 
@@ -89,7 +85,7 @@ def validate(model, optimizer, scheduler, best_score, cur_epochs):
             images = images.to(device, dtype=torch.float32)
             labels = labels.to(device, dtype=torch.long)
             
-            outputs = model(images)
+            outputs, _ = model(images)
             preds = outputs.detach().max(dim=1)[1].cpu().numpy()
             targets = labels.cpu().numpy()
             
@@ -191,8 +187,7 @@ def train_teacher(net, optimizer, criterion):
         images = images.to(device, dtype=torch.float32)
         labels = labels.to(device, dtype=torch.long)
         
-        outputs = net(images)
-        print(outputs.shape)
+        outputs, _ = net(images)
         loss = criterion(outputs, labels)
         
         preds = outputs.detach().max(dim=1)[1].cpu().numpy()

@@ -17,7 +17,7 @@ repeats = 2
 config = {
     '--output_stride': ['32'],
     '--model': ['v3_resnet50'],
-    '--teacher_model': ['v3_resnet50']
+    '--teacher_model': ['v3_resnet50'],
     '': ['--separable_conv', ''],
     '--mode': ['student'],
     '--batch_size': ['16'], 

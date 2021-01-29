@@ -103,7 +103,7 @@ def validate(model, optimizer, scheduler, best_score, cur_epochs):
         score = metrics.get_results()
         print(metrics.to_str(score))
         
-    utils.save_ckpt('checkpoints/latest', opts, model, optimizer, scheduler, best_score, cur_epochs)   
+    utils.save_ckpt(opts.data_root+'/output', opts, model, optimizer, scheduler, best_score, cur_epochs)   
     if score['Mean IoU'] > best_score:  # save best model
         best_score = score['Mean IoU']
         utils.save_ckpt('checkpoints/best', opts, model, optimizer, scheduler, best_score, cur_epochs)   

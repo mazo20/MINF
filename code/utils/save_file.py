@@ -2,6 +2,8 @@ from PIL import Image
 import matplotlib
 import matplotlib.pyplot as plt
 import numpy as np
+import os
+import csv
 
 def save_images(loader, image, target, pred, denorm, img_id):
     image = image.detach().cpu().numpy()
@@ -22,3 +24,18 @@ def save_images(loader, image, target, pred, denorm, img_id):
     ax.yaxis.set_major_locator(matplotlib.ticker.NullLocator())
     plt.savefig('results/%d_overlay.png' % img_id, bbox_inches='tight', pad_inches=0)
     plt.close()
+    
+def create_result(opts):
+    path = 'results/%s_os_%d_%s' % (opts.mode, opts.output_stride, opts.date)
+    with open(path + '.csv', 'w', newline='') as csvfile:
+        spamwriter = csv.writer(csvfile, delimiter=' ',)
+        spamwriter.writerow(['model='+opts.model, 'teacher='+opts.teacher_model, 
+                             'separable='+str(opts.separable_conv), 'os='+str(opts.output_stride), 
+                             'crop='+str(opts.crop_size)])
+        spamwriter.writerow(['Overall_Acc', 'Mean_Acc', 'FreqW_Acc', 'Mean_IoU'])
+    
+def save_result(score, opts):
+    path = 'results/%s_os_%d_%s' % (opts.mode, opts.output_stride, opts.date)
+    with open(path + '.csv', 'a', newline='') as csvfile:
+        spamwriter = csv.writer(csvfile, delimiter=' ',)
+        spamwriter.writerow([score['Overall Acc'], score['Mean Acc'], score['FreqW Acc'], score['Mean IoU']])

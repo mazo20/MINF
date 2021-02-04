@@ -37,6 +37,7 @@ src_path=${repo_home}/datasets/data
 # input data directory path on the scratch disk of the node
 dest_path=${SCRATCH_HOME}/deeplab/datasets/data/input
 mkdir -p ${dest_path}  # make it if required
+mkdir -p ${SCRATCH_HOME}/deeplab/datasets/data/output
 
 rsync --archive --update --compress --progress ${src_path}/ ${dest_path}
 

@@ -1,5 +1,6 @@
 import os
 from tqdm import tqdm
+from torchsummary import summary
 import argparse
 import torch
 import utils
@@ -10,6 +11,7 @@ import numpy as np
 import random
 from dataset import *
 import network
+from datetime import datetime
 
 def get_argparser():
     parser = argparse.ArgumentParser()
@@ -97,14 +99,9 @@ def validate(model, optimizer, scheduler, best_score, cur_epochs):
                     img_id += 1 
                         
         score = metrics.get_results()
-        print(metrics.to_str(score))
         
-    utils.save_ckpt(opts.data_root+'/output', opts, model, optimizer, scheduler, best_score, cur_epochs)   
-    if score['Mean IoU'] > best_score:  # save best model
-        best_score = score['Mean IoU']
-        utils.save_ckpt('checkpoints/best', opts, model, optimizer, scheduler, best_score, cur_epochs)   
-    
     model.train()
+    return score
 
 def main():
     # Set up model
@@ -127,7 +124,9 @@ def main():
     utils.set_bn_momentum(model.backbone, momentum=0.01)
     
     if opts.count_flops:
+        # summary(model, (3, opts.crop_size, opts.crop_size))
         print(utils.count_flops(model, opts.crop_size))
+        
         return
     
     # Set up optimizer and criterion
@@ -176,7 +175,12 @@ def main():
         
         scheduler.step()
         
-        validate(model, optimizer, scheduler, best_score, cur_epochs)
+        score = validate(model, optimizer, scheduler, best_score, cur_epochs)
+        utils.save_result(score, opts)
+        utils.save_ckpt(opts.data_root+'/output/', opts, model, optimizer, scheduler, best_score, cur_epochs)   
+        if score['Mean IoU'] > best_score:  # save best model
+            best_score = score['Mean IoU']
+            utils.save_ckpt('checkpoints/best', opts, model, optimizer, scheduler, best_score, cur_epochs)  
         
 
 def train_teacher(net, optimizer, criterion):
@@ -214,8 +218,32 @@ def train_student(net, teacher, optimizer):
         loss = utils.distillation(outputs_student, outputs_teacher, labels, opts.temperature, opts.alpha)
         
         adjusted_beta = (opts.beta*3)/len(ints_student)
-        for i in range(len(ints_student)):
-            loss += adjusted_beta * utils.at_loss(ints_student[i], ints_teacher[i])
+        
+        j = 0
+        n = len(ints_student)
+        m = len(ints_teacher)
+        
+        at_student = []
+        at_teacher = []
+        
+        for i in range(n):
+            size_student = ints_student[i].shape[2]
+            if i < n-1 and size_student == ints_student[i+1].shape[2]:
+                continue
+            for j in range(m):
+                size_teacher = ints_teacher[j].shape[2]
+                if j < m-1 and size_teacher == ints_teacher[j+1].shape[2] and size_teacher != size_student:
+                    continue
+                
+                if (size_student == size_teacher):
+                    at_student.append(ints_student[i])
+                    at_teacher.append(ints_teacher[j])
+                    break
+            
+            
+        for i in range(len(at_student)):        
+            loss += adjusted_beta * utils.at_loss(at_student[i], at_teacher[i])
+            
         
         preds = outputs_student.detach().max(dim=1)[1].cpu().numpy()
         targets = labels.cpu().numpy()
@@ -230,7 +258,10 @@ def train_student(net, teacher, optimizer):
 
 if __name__ == '__main__':
     opts = get_argparser()
+    opts.date = datetime.now()
     mkdirs()
+    
+    utils.create_result(opts)
     
     # Setup CUDA devices
     os.environ['CUDA_VISIBLE_DEVICES'] = opts.gpu_id

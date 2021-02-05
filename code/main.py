@@ -11,7 +11,7 @@ import numpy as np
 import random
 from dataset import *
 import network
-from datetime import datetime
+from datetime import date
 
 def get_argparser():
     parser = argparse.ArgumentParser()
@@ -259,7 +259,7 @@ def train_student(net, teacher, optimizer):
 
 if __name__ == '__main__':
     opts = get_argparser()
-    opts.date = datetime.now()
+    opts.date = date.now()
     mkdirs()
     
     utils.create_result(opts)

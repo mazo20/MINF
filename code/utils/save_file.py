@@ -26,7 +26,7 @@ def save_images(loader, image, target, pred, denorm, img_id):
     plt.close()
     
 def create_result(opts):
-    path = 'results/%s_os_%d_%s' % (opts.mode, opts.output_stride, opts.date)
+    path = 'results/%s_%s_os_%d_%s_%d' % (opts.mode, opts.model, opts.output_stride, opts.date, opts.random_seed)
     with open(path + '.csv', 'w', newline='') as csvfile:
         spamwriter = csv.writer(csvfile, delimiter=' ',)
         spamwriter.writerow(['model='+opts.model, 'teacher='+opts.teacher_model, 
@@ -35,7 +35,7 @@ def create_result(opts):
         spamwriter.writerow(['Overall_Acc', 'Mean_Acc', 'FreqW_Acc', 'Mean_IoU'])
     
 def save_result(score, opts):
-    path = 'results/%s_os_%d_%s' % (opts.mode, opts.output_stride, opts.date)
+    path = 'results/%s_%s_os_%d_%s_%d' % (opts.mode, opts.model, opts.output_stride, opts.date, opts.random_seed)
     with open(path + '.csv', 'a', newline='') as csvfile:
         spamwriter = csv.writer(csvfile, delimiter=' ',)
         spamwriter.writerow([score['Overall Acc'], score['Mean Acc'], score['FreqW Acc'], score['Mean IoU']])

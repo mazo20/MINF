@@ -260,7 +260,7 @@ def train_student(net, teacher, optimizer):
 
 if __name__ == '__main__':
     opts = get_argparser()
-    opts.date = date.now()
+    opts.date = date.today()
     mkdirs()
     
     utils.create_result(opts)

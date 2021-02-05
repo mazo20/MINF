@@ -176,6 +176,7 @@ def main():
         scheduler.step()
         
         score = validate(model, optimizer, scheduler, best_score, cur_epochs)
+        print(metrics.to_str(val_score))
         utils.save_result(score, opts)
         
         utils.save_ckpt(opts.data_root.replace('/input', '') + '/output/', opts, model, optimizer, scheduler, best_score, cur_epochs)   

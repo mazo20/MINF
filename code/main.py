@@ -126,7 +126,6 @@ def main():
     if opts.count_flops:
         # summary(model, (3, opts.crop_size, opts.crop_size))
         print(utils.count_flops(model, opts.crop_size))
-        
         return
     
     # Set up optimizer and criterion

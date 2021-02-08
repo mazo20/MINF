@@ -16,11 +16,12 @@ repeats = 2
 
 config = {
     '--output_stride': ['16', '32'],
-    '--model': ['deeplabv3plus_resnet50', 'deeplabv3_resnet50'],
+    '--model': ['v3plus_resnet50', 'v3_resnet50'],
     '': ['--separable_conv', ''],
     '--mode': ['student'],
     '--batch_size': ['16'], 
     '--crop_size': ['321', '256'] * repeats,
+    '--teacher_model': ['v3plus_resnet50'],
     '--teacher_ckpt': ['checkpoints/best_v3plus_resnet50_voc_os16_5.pth '],
     
 }

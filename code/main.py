@@ -218,8 +218,6 @@ def train_student(net, teacher, optimizer):
         
         loss = utils.distillation(outputs_student, outputs_teacher, labels, opts.temperature, opts.alpha)
         
-        adjusted_beta = (opts.beta*3)/len(ints_student)
-        
         j = 0
         n = len(ints_student)
         m = len(ints_teacher)
@@ -240,7 +238,9 @@ def train_student(net, teacher, optimizer):
                     at_student.append(ints_student[i])
                     at_teacher.append(ints_teacher[j])
                     break
-            
+                
+        
+        adjusted_beta = (opts.beta*3)/len(at_student)    
             
         for i in range(len(at_student)):        
             loss += adjusted_beta * utils.at_loss(at_student[i], at_teacher[i])

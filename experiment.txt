@@ -1,8 +1,0 @@
-python code/main.py  --data_root /disk/scratch/maciejkowalski/deeplab/datasets/data/input --output_stride 16 --model deeplabv3plus_resnet50  --separable_conv --mode teacher --batch_size 16 --crop_size 321 --random_seed 0
-python code/main.py  --data_root /disk/scratch/maciejkowalski/deeplab/datasets/data/input --output_stride 16 --model deeplabv3plus_resnet50  --separable_conv --mode teacher --batch_size 16 --crop_size 321 --random_seed 1
-python code/main.py  --data_root /disk/scratch/maciejkowalski/deeplab/datasets/data/input --output_stride 16 --model deeplabv3plus_resnet50   --mode teacher --batch_size 16 --crop_size 321 --random_seed 2
-python code/main.py  --data_root /disk/scratch/maciejkowalski/deeplab/datasets/data/input --output_stride 16 --model deeplabv3plus_resnet50   --mode teacher --batch_size 16 --crop_size 321 --random_seed 3
-python code/main.py  --data_root /disk/scratch/maciejkowalski/deeplab/datasets/data/input --output_stride 16 --model deeplabv3_resnet50  --separable_conv --mode teacher --batch_size 16 --crop_size 321 --random_seed 4
-python code/main.py  --data_root /disk/scratch/maciejkowalski/deeplab/datasets/data/input --output_stride 16 --model deeplabv3_resnet50  --separable_conv --mode teacher --batch_size 16 --crop_size 321 --random_seed 5
-python code/main.py  --data_root /disk/scratch/maciejkowalski/deeplab/datasets/data/input --output_stride 16 --model deeplabv3_resnet50   --mode teacher --batch_size 16 --crop_size 321 --random_seed 6
-python code/main.py  --data_root /disk/scratch/maciejkowalski/deeplab/datasets/data/input --output_stride 16 --model deeplabv3_resnet50   --mode teacher --batch_size 16 --crop_size 321 --random_seed 7

@@ -20,13 +20,13 @@ def get_argparser():
     parser.add_argument("--data_root", type=str, default='../datasets/data', help="path to Dataset")
     parser.add_argument("--dataset", type=str, default='voc', choices=['voc', 'cityscapes'], help='Name of dataset')
     parser.add_argument("--num_classes", type=int, default=None, help="num classes (default: None)")
+    parser.add_argument("--results_root", type=str, default='results', help="path to output the results and checkpoint")
 
     # Deeplab Options
     parser.add_argument("--model", type=str, default='v3plus_mobilenet',choices=['v3_resnet50',  'v3plus_resnet50',
                                  'v3_resnet101', 'v3plus_resnet101', 'v3_mobilenet', 'v3plus_mobilenet'], help='model name')
     parser.add_argument("--teacher_model", type=str, default='v3plus_mobilenet',choices=['v3_resnet50',  'v3plus_resnet50',
                                  'v3_resnet101', 'v3plus_resnet101', 'v3_mobilenet', 'v3plus_mobilenet'], help='model name')
-    
     parser.add_argument("--separable_conv", action='store_true', default=False,help="apply separable conv to decoder and aspp")
     parser.add_argument("--output_stride", type=int, default=16, choices=[8, 16, 32])
 
@@ -68,9 +68,10 @@ def get_argparser():
 
     return args
 
-def mkdirs():
+def mkdirs(opts):
     utils.mkdir('checkpoints')
     utils.mkdir('results')
+    utils.mkdir(opts.results_root)
 
 def validate(model, optimizer, scheduler, best_score, cur_epochs):
     
@@ -121,12 +122,13 @@ def main():
     teacher = None
     if opts.separable_conv: #and 'plus' in opts.model:
         network.deeplab.convert_to_separable_conv(model.classifier)
+        network.deeplab.convert_to_separable_conv(model.backbone)
     utils.set_bn_momentum(model.backbone, momentum=0.01)
     
-    if opts.count_flops:
-        # summary(model, (3, opts.crop_size, opts.crop_size))
-        print(utils.count_flops(model, opts.crop_size))
+    macs, params = utils.count_flops(model, opts)
+    if (opts.count_flops):
         return
+    utils.create_result(opts, macs, params)
     
     # Set up optimizer and criterion
     optimizer = torch.optim.SGD(params=[
@@ -181,7 +183,7 @@ def main():
         utils.save_ckpt(opts.data_root.replace('/input', '') + '/output/', opts, model, optimizer, scheduler, best_score, cur_epochs)   
         if score['Mean IoU'] > best_score:  # save best model
             best_score = score['Mean IoU']
-            utils.save_ckpt('checkpoints/best', opts, model, optimizer, scheduler, best_score, cur_epochs)  
+            utils.save_ckpt(opts.results_root, opts, model, optimizer, scheduler, best_score, cur_epochs)  
         
 
 def train_teacher(net, optimizer, criterion):
@@ -260,9 +262,7 @@ def train_student(net, teacher, optimizer):
 if __name__ == '__main__':
     opts = get_argparser()
     opts.date = date.today()
-    mkdirs()
-    
-    utils.create_result(opts)
+    mkdirs(opts)
     
     # Setup CUDA devices
     os.environ['CUDA_VISIBLE_DEVICES'] = opts.gpu_id

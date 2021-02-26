@@ -88,17 +88,28 @@ class AtrousSeparableConvolution(nn.Module):
     def __init__(self, in_channels, out_channels, kernel_size,
                             stride=1, padding=0, dilation=1, bias=True):
         super(AtrousSeparableConvolution, self).__init__()
-        self.body = nn.Sequential(
+        
+        # self.body = nn.Sequential(
+        #     # Separable Conv
+        #     nn.Conv2d( in_channels, in_channels, kernel_size=kernel_size, stride=stride, padding=padding, dilation=dilation, bias=bias, groups=in_channels ),
+        #     # PointWise Conv
+        #     nn.Conv2d( in_channels, out_channels, kernel_size=1, stride=1, padding=0, bias=bias),
+        # )
+        
+        bottleneck = out_channels // 4
+        self.body2 = nn.Sequential(
+            # Bottleneck
+            nn.Conv2d(in_channels, bottleneck, kernel_size=1, stride=1, padding=0, bias=bias),
             # Separable Conv
-            nn.Conv2d( in_channels, in_channels, kernel_size=kernel_size, stride=stride, padding=padding, dilation=dilation, bias=bias, groups=in_channels ),
+            nn.Conv2d( bottleneck, bottleneck, kernel_size=kernel_size, stride=stride, padding=padding, dilation=dilation, bias=bias, groups=bottleneck),
             # PointWise Conv
-            nn.Conv2d( in_channels, out_channels, kernel_size=1, stride=1, padding=0, bias=bias),
+            nn.Conv2d( bottleneck, out_channels, kernel_size=1, stride=1, padding=0, bias=bias),
         )
         
         self._init_weight()
 
     def forward(self, x):
-        return self.body(x)
+        return self.body2(x)
 
     def _init_weight(self):
         for m in self.modules():

@@ -25,19 +25,19 @@ def save_images(loader, image, target, pred, denorm, img_id):
     plt.savefig('results/%d_overlay.png' % img_id, bbox_inches='tight', pad_inches=0)
     plt.close()
     
-def create_result(opts):
-    path = 'results/%s_%s_os_%d_%s_%d_%d.csv' % (opts.mode, opts.model, opts.output_stride, opts.date, opts.crop_size, opts.random_seed)
+def create_result(opts, macs, params):
+    path = f'{opts.results_root}/{opts.mode}_{opts.model}_os_{opts.output_stride}_{opts.crop_size}_{opts.random_seed}.csv'
     
     if not os.path.exists(path):
         with open(path, 'w', newline='') as csvfile:
             spamwriter = csv.writer(csvfile, delimiter=' ',)
             spamwriter.writerow(['model='+opts.model, 'teacher='+opts.teacher_model, 
                                 'separable='+str(opts.separable_conv), 'os='+str(opts.output_stride), 
-                                'crop='+str(opts.crop_size)])
+                                'crop='+str(opts.crop_size), 'MAdds='+str(macs), 'params='+str(params)])
             spamwriter.writerow(['Overall_Acc', 'Mean_Acc', 'FreqW_Acc', 'Mean_IoU'])
     
 def save_result(score, opts):
-    path = 'results/%s_%s_os_%d_%s_%d_%d.csv' % (opts.mode, opts.model, opts.output_stride, opts.date, opts.crop_size, opts.random_seed)
+    path = f'{opts.results_root}/{opts.mode}_{opts.model}_os_{opts.output_stride}_{opts.crop_size}_{opts.random_seed}.csv'
     with open(path, 'a', newline='') as csvfile:
         spamwriter = csv.writer(csvfile, delimiter=' ',)
         spamwriter.writerow([score['Overall Acc'], score['Mean Acc'], score['FreqW Acc'], score['Mean IoU']])

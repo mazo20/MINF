@@ -1,6 +1,7 @@
 #!/usr/bin/env python3
 """Script for generating experiments.txt"""
 import os
+import sys
 import itertools
 
 # The home dir on the node's scratch disk
@@ -15,6 +16,7 @@ base_call = (f"python code/main.py  --data_root {DATA_HOME}/input")
 repeats = 2
 
 config = {
+    '--results_root': ['results/' + sys.argv[1]],
     '--output_stride': ['16'],
     '--model': ['v3plus_resnet50'],
     '': ['--separable_conv', ''],

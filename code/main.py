@@ -122,7 +122,7 @@ def main():
     teacher = None
     if opts.separable_conv: #and 'plus' in opts.model:
         network.deeplab.convert_to_separable_conv(model.classifier)
-        network.deeplab.convert_to_separable_conv(model.backbone)
+        # network.deeplab.convert_to_separable_conv(model.backbone)
     utils.set_bn_momentum(model.backbone, momentum=0.01)
     
     macs, params = utils.count_flops(model, opts)
@@ -180,7 +180,7 @@ def main():
         print(metrics.to_str(score))
         utils.save_result(score, opts)
         
-        utils.save_ckpt(opts.data_root.replace('/input', '') + '/output/', opts, model, optimizer, scheduler, best_score, cur_epochs)   
+        utils.save_ckpt(opts.data_root.replace('/input', '') + '/output', opts, model, optimizer, scheduler, best_score, cur_epochs)   
         if score['Mean IoU'] > best_score:  # save best model
             best_score = score['Mean IoU']
             utils.save_ckpt(opts.results_root, opts, model, optimizer, scheduler, best_score, cur_epochs)  

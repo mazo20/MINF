@@ -100,8 +100,10 @@ class AtrousSeparableConvolution(nn.Module):
         self.body2 = nn.Sequential(
             # Bottleneck
             nn.Conv2d(in_channels, bottleneck, kernel_size=1, stride=1, padding=0, bias=bias),
+            nn.BatchNorm2d(bottleneck),
             # Separable Conv
             nn.Conv2d( bottleneck, bottleneck, kernel_size=kernel_size, stride=stride, padding=padding, dilation=dilation, bias=bias, groups=bottleneck),
+            nn.BatchNorm2d(bottleneck),
             # PointWise Conv
             nn.Conv2d( bottleneck, out_channels, kernel_size=1, stride=1, padding=0, bias=bias),
         )

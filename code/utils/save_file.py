@@ -4,8 +4,9 @@ import matplotlib.pyplot as plt
 import numpy as np
 import os
 import csv
+import torch.nn.functional as F
 
-def save_images(loader, image, target, pred, denorm, img_id):
+def save_images(loader, image, target, pred, attention_maps, denorm, img_id):
     image = image.detach().cpu().numpy()
     image = (denorm(image) * 255).transpose(1, 2, 0).astype(np.uint8)
     target = loader.dataset.decode_target(target).astype(np.uint8)
@@ -18,12 +19,33 @@ def save_images(loader, image, target, pred, denorm, img_id):
     fig = plt.figure()
     plt.imshow(image)
     plt.axis('off')
-    plt.imshow(pred, alpha=0.7)
+    plt.imshow(pred, alpha=0.5)
     ax = plt.gca()
     ax.xaxis.set_major_locator(matplotlib.ticker.NullLocator())
     ax.yaxis.set_major_locator(matplotlib.ticker.NullLocator())
     plt.savefig('results/%d_overlay.png' % img_id, bbox_inches='tight', pad_inches=0)
     plt.close()
+    
+    
+    for i in range(len(attention_maps)):
+        fig = plt.figure()
+        plt.imshow(image)
+        plt.axis('off')
+        
+        at_map = F.interpolate(attention_maps[i].pow(2).mean(0).unsqueeze(0).unsqueeze(0), size=image.shape[:2], mode='bilinear', align_corners=False).squeeze(0).squeeze(0)
+        
+        plt.imshow(at_map, interpolation='bicubic', alpha=0.7)
+        ax = plt.gca()
+        ax.xaxis.set_major_locator(matplotlib.ticker.NullLocator())
+        ax.yaxis.set_major_locator(matplotlib.ticker.NullLocator())
+        plt.savefig('results/%d_at_%d.png' % (img_id, i), bbox_inches='tight', pad_inches=0)
+        plt.close()
+    
+def save_at_map(map):
+    plt.imshow(map, interpolation='bicubic')
+    plt.savefig('results/test.png', bbox_inches='tight')
+    plt.close()
+
     
 def create_result(opts, macs, params):
     path = f'{opts.results_root}/{opts.mode}_{opts.model}_os_{opts.output_stride}_{opts.crop_size}_{opts.random_seed}.csv'

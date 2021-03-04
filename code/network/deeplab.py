@@ -86,32 +86,35 @@ class AtrousSeparableConvolution(nn.Module):
     """ Atrous Separable Convolution
     """
     def __init__(self, in_channels, out_channels, kernel_size,
-                            stride=1, padding=0, dilation=1, bias=True):
+                            stride=1, padding=0, dilation=1, bias=True, withBottleneck=False):
         super(AtrousSeparableConvolution, self).__init__()
+        if withBottleneck:
+            bottleneck = out_channels // 4
+            self.body = nn.Sequential(
+                # Bottleneck
+                nn.Conv2d(in_channels, bottleneck, kernel_size=1, stride=1, padding=0, bias=bias),
+                nn.BatchNorm2d(bottleneck),
+                # Separable Conv
+                nn.Conv2d( bottleneck, bottleneck, kernel_size=kernel_size, stride=stride, padding=padding, dilation=dilation, bias=bias, groups=bottleneck),
+                nn.BatchNorm2d(bottleneck),
+                # PointWise Conv
+                nn.Conv2d( bottleneck, out_channels, kernel_size=1, stride=1, padding=0, bias=bias),
+            )
+        else:
+            self.body = nn.Sequential(
+                # Separable Conv
+                nn.Conv2d( in_channels, in_channels, kernel_size=kernel_size, stride=stride, padding=padding, dilation=dilation, bias=bias, groups=in_channels ),
+                # PointWise Conv
+                nn.Conv2d( in_channels, out_channels, kernel_size=1, stride=1, padding=0, bias=bias),
+            )
+            
         
-        # self.body = nn.Sequential(
-        #     # Separable Conv
-        #     nn.Conv2d( in_channels, in_channels, kernel_size=kernel_size, stride=stride, padding=padding, dilation=dilation, bias=bias, groups=in_channels ),
-        #     # PointWise Conv
-        #     nn.Conv2d( in_channels, out_channels, kernel_size=1, stride=1, padding=0, bias=bias),
-        # )
         
-        bottleneck = out_channels // 4
-        self.body2 = nn.Sequential(
-            # Bottleneck
-            nn.Conv2d(in_channels, bottleneck, kernel_size=1, stride=1, padding=0, bias=bias),
-            nn.BatchNorm2d(bottleneck),
-            # Separable Conv
-            nn.Conv2d( bottleneck, bottleneck, kernel_size=kernel_size, stride=stride, padding=padding, dilation=dilation, bias=bias, groups=bottleneck),
-            nn.BatchNorm2d(bottleneck),
-            # PointWise Conv
-            nn.Conv2d( bottleneck, out_channels, kernel_size=1, stride=1, padding=0, bias=bias),
-        )
         
         self._init_weight()
 
     def forward(self, x):
-        return self.body2(x)
+        return self.body(x)
 
     def _init_weight(self):
         for m in self.modules():
@@ -176,7 +179,7 @@ class ASPP(nn.Module):
 
 
 
-def convert_to_separable_conv(module):
+def convert_to_separable_conv(module, bottleneck=False):
     new_module = module
     if isinstance(module, nn.Conv2d) and module.kernel_size[0]>1:
         new_module = AtrousSeparableConvolution(module.in_channels,
@@ -185,7 +188,8 @@ def convert_to_separable_conv(module):
                                       module.stride,
                                       module.padding,
                                       module.dilation,
-                                      module.bias)
+                                      module.bias,
+                                      bottleneck)
     for name, child in module.named_children():
-        new_module.add_module(name, convert_to_separable_conv(child))
+        new_module.add_module(name, convert_to_separable_conv(child, bottleneck))
     return new_module

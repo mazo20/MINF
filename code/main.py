@@ -28,6 +28,7 @@ def get_argparser():
     parser.add_argument("--teacher_model", type=str, default='v3plus_mobilenet',choices=['v3_resnet50',  'v3plus_resnet50',
                                  'v3_resnet101', 'v3plus_resnet101', 'v3_mobilenet', 'v3plus_mobilenet'], help='model name')
     parser.add_argument("--separable_conv", action='store_true', default=False,help="apply separable conv to decoder and aspp")
+    parser.add_argument("--separable", default=None, choices=[None, 'bottleneck', 'grouped'])
     parser.add_argument("--output_stride", type=int, default=16, choices=[8, 16, 32])
 
     # Train Options
@@ -88,15 +89,17 @@ def validate(model, optimizer, scheduler, best_score, cur_epochs):
             images = images.to(device, dtype=torch.float32)
             labels = labels.to(device, dtype=torch.long)
             
-            outputs, _ = model(images)
+            outputs, ints = model(images)
             preds = outputs.detach().max(dim=1)[1].cpu().numpy()
             targets = labels.cpu().numpy()
             
             metrics.update(targets, preds)
             
+            
             if opts.save_val_results:
                 for i in range(len(images)):
-                    utils.save_images(val_loader, images[i], targets[i], preds[i], denorm, img_id)
+                    at_maps = [ints[j][i] for j in range(len(ints))]
+                    utils.save_images(val_loader, images[i], targets[i], preds[i], at_maps, denorm, img_id)
                     img_id += 1 
                         
         score = metrics.get_results()
@@ -120,8 +123,9 @@ def main():
     
     model = model_map[opts.model](num_classes=opts.num_classes, output_stride=opts.output_stride)
     teacher = None
-    if opts.separable_conv: #and 'plus' in opts.model:
-        network.deeplab.convert_to_separable_conv(model.classifier)
+    if opts.separable is not None: #and 'plus' in opts.model:
+        # print(opts.separable)
+        network.deeplab.convert_to_separable_conv(model.classifier, opts.separable == 'bottleneck')
         # network.deeplab.convert_to_separable_conv(model.backbone)
     utils.set_bn_momentum(model.backbone, momentum=0.01)
     
@@ -138,6 +142,8 @@ def main():
     scheduler = utils.PolyLR(optimizer, opts.total_epochs * len(val_loader), power=0.9)
     criterion = nn.CrossEntropyLoss(ignore_index=255, reduction='mean')
     
+    
+    
     # Load from checkpoint
     if opts.ckpt is not None and os.path.isfile(opts.ckpt):
         checkpoint = torch.load(opts.ckpt, map_location=torch.device('cpu'))
@@ -153,6 +159,11 @@ def main():
     else:
         model = nn.DataParallel(model)
         model.to(device)
+        
+    if opts.save_val_results:
+        score = validate(model, optimizer, scheduler, best_score, cur_epochs)
+        print(metrics.to_str(score)) 
+        return
     
     if opts.mode == "student":
         teacher = model_map[opts.teacher_model](num_classes=opts.num_classes, output_stride=16)
@@ -220,27 +231,7 @@ def train_student(net, teacher, optimizer):
         
         loss = utils.distillation(outputs_student, outputs_teacher, labels, opts.temperature, opts.alpha)
         
-        j = 0
-        n = len(ints_student)
-        m = len(ints_teacher)
-        
-        at_student = []
-        at_teacher = []
-        
-        for i in range(n):
-            size_student = ints_student[i].shape[2]
-            if i < n-1 and size_student == ints_student[i+1].shape[2]:
-                continue
-            for j in range(m):
-                size_teacher = ints_teacher[j].shape[2]
-                if j < m-1 and size_teacher == ints_teacher[j+1].shape[2] and size_teacher != size_student:
-                    continue
-                
-                if (size_student == size_teacher):
-                    at_student.append(ints_student[i])
-                    at_teacher.append(ints_teacher[j])
-                    break
-                
+        at_teacher, at_student = utils.match_at_layers(ints_teacher, ints_student)  
         
         adjusted_beta = (opts.beta*3)/len(at_student)    
             

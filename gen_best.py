@@ -13,16 +13,17 @@ SCRATCH_HOME = f'{SCRATCH_DISK}/{USER}'
 DATA_HOME = f'{SCRATCH_HOME}/deeplab/datasets/data'
 base_call = (f"python code/main.py  --data_root {DATA_HOME}/input")
 
-repeats = 2
+repeats = 1
 
 config = {
     '--results_root': ['results/' + sys.argv[1]],
     '--output_stride': ['16'],
     '--model': ['v3plus_resnet50'],
-    '': ['--separable_conv'],
+    '--separable': ['none'],
     '--mode': ['teacher'],
     '--batch_size': ['16'], 
     '--crop_size': ['321', '256'] * repeats,
+    '--random_seed': ['1'],
     # '--teacher_ckpt': ['checkpoints/best_plusmobilenet.pth'],
     
 }
@@ -42,7 +43,7 @@ for i, dictionary in enumerate(permutations_dicts):
     call = base_call
     for key, value in dictionary.items():
         call += " " + key + " " + value
-    call += " " + "--random_seed" + " " + str(i)
+    call += " " + "--index" + " " + str(i)
     print(call, file=output_file)
     
 output_file.close()

@@ -23,9 +23,9 @@ def get_argparser():
     parser.add_argument("--results_root", type=str, default='results', help="path to output the results and checkpoint")
 
     # Deeplab Options
-    parser.add_argument("--model", type=str, default='v3plus_mobilenet',choices=['v3_resnet50',  'v3plus_resnet50',
+    parser.add_argument("--model", type=str, default='v3plus_resnet50',choices=['v3_resnet50',  'v3plus_resnet50',
                                  'v3_resnet101', 'v3plus_resnet101', 'v3_mobilenet', 'v3plus_mobilenet'], help='model name')
-    parser.add_argument("--teacher_model", type=str, default='v3plus_mobilenet',choices=['v3_resnet50',  'v3plus_resnet50',
+    parser.add_argument("--teacher_model", type=str, default='v3plus_resnet50',choices=['v3_resnet50',  'v3plus_resnet50',
                                  'v3_resnet101', 'v3plus_resnet101', 'v3_mobilenet', 'v3plus_mobilenet'], help='model name')
     parser.add_argument("--separable_conv", action='store_true', default=False,help="apply separable conv to decoder and aspp")
     parser.add_argument("--separable", default=None, choices=[None, 'bottleneck', 'grouped'])
@@ -34,7 +34,8 @@ def get_argparser():
     # Train Options
     parser.add_argument("--test_only", action='store_true', default=False)
     parser.add_argument("--save_val_results", action='store_true', default=False, help="save segmentation results to \"./results\"")
-    parser.add_argument("--total_epochs", type=int, default=30, help="Number of epochs per training")
+    parser.add_argument("--total_epochs",     type=int,   default=30,               help="Number of epochs per training")
+    parser.add_argument("--max_epochs",       type=int,   default=30)
     parser.add_argument("--lr", type=float, default=0.01, help="learning rate (default: 0.01)")
     parser.add_argument("--lr_policy", type=str, default='poly', choices=['poly', 'step'], help="learning rate scheduler policy")
     parser.add_argument("--step_size", type=int, default=10000)
@@ -42,7 +43,7 @@ def get_argparser():
     parser.add_argument("--batch_size", type=int, default=16, help='batch size (default: 16)')
     parser.add_argument("--val_batch_size", type=int, default=8, help='batch size for validation (default: 4)')
     parser.add_argument("--crop_size", type=int, default=513)
-    parser.add_argument("--num_workers", type=int, default=2, help='number of workers loading the data')
+    parser.add_argument("--num_workers", type=int, default=4, help='number of workers loading the data')
     parser.add_argument('--temperature', default=4, type=float, help='temp for KD')
     parser.add_argument('--alpha', default=0.9, type=float, help='alpha for KD')
     parser.add_argument('--beta', default=1e3, type=float, help='beta for AT')
@@ -57,17 +58,18 @@ def get_argparser():
     parser.add_argument("--gpu_id", type=str, default='0', help="GPU ID")
     parser.add_argument("--weight_decay", type=float, default=1e-4, help='weight decay (default: 1e-4)')
     parser.add_argument("--random_seed", type=int, default=1, help="random seed (default: 1)")
+    parser.add_argument("--index",  type=int,   default=1)
     parser.add_argument("--count_flops", action="store_true", default=False)
     parser.add_argument("--score_interval", type=int, default=1, help="number of iterations for score printint")
     
-    args = parser.parse_args()
+    opts = parser.parse_args()
     
-    if args.dataset.lower() == 'voc':
-        args.num_classes = 21
-    elif args.dataset.lower() == 'cityscapes':
-        args.num_classes = 19
+    if opts.dataset.lower() == 'voc':
+        opts.num_classes = 21
+    elif opts.dataset.lower() == 'cityscapes':
+        opts.num_classes = 19
 
-    return args
+    return opts
 
 def mkdirs(opts):
     utils.mkdir('checkpoints')
@@ -119,7 +121,7 @@ def main():
     }
     
     best_score = 0.0
-    cur_epochs = 0
+    epoch      = 0
     
     model = model_map[opts.model](num_classes=opts.num_classes, output_stride=opts.output_stride)
     teacher = None
@@ -139,7 +141,7 @@ def main():
         {'params': model.backbone.parameters(), 'lr': 0.1*opts.lr},
         {'params': model.classifier.parameters(), 'lr': opts.lr},
     ], lr=opts.lr, momentum=0.9, weight_decay=opts.weight_decay)
-    scheduler = utils.PolyLR(optimizer, opts.total_epochs * len(val_loader), power=0.9)
+    scheduler = utils.PolyLR(optimizer, opts.total_epochs * len(train_loader), power=0.9)
     criterion = nn.CrossEntropyLoss(ignore_index=255, reduction='mean')
     
     
@@ -152,8 +154,8 @@ def main():
         model.to(device)
         optimizer.load_state_dict(checkpoint["optimizer_state"])
         scheduler.load_state_dict(checkpoint["scheduler_state"])
-        cur_epochs = checkpoint.get("cur_epochs", 0)
-        best_score = checkpoint['best_score']
+        epoch = checkpoint.get("epoch", 0)
+        best_score = checkpoint.get('best_score', 0.0)
         print("Model restored from %s" % opts.ckpt)
         del checkpoint  # free memory 
     else:
@@ -177,8 +179,7 @@ def main():
     
     # =====  Train  =====
     
-    for epoch in tqdm(range(cur_epochs, opts.total_epochs)):
-        cur_epochs += 1
+    for epoch in tqdm(range(epoch, opts.total_epochs)):
         
         if opts.mode == "teacher":
             train_teacher(model, optimizer, criterion, scheduler)
@@ -190,9 +191,9 @@ def main():
         utils.save_result(score, opts)
         
         utils.save_ckpt(opts.data_root.replace('/input', '') + '/output', opts, model, optimizer, scheduler, best_score, cur_epochs)   
-        if score['Mean IoU'] > best_score:  # save best model
+        if score['Mean IoU'] > best_score or (opts.max_epochs != opts.total_epochs and epoch+1 == opts.total_epochs):
             best_score = score['Mean IoU']
-            utils.save_ckpt(opts.results_root, opts, model, optimizer, scheduler, best_score, cur_epochs)  
+            utils.save_ckpt(opts.data_root, opts, model, optimizer, scheduler, best_score, epoch+1) 
         
 
 def train_teacher(net, optimizer, criterion, scheduler):
@@ -236,7 +237,6 @@ def train_student(net, teacher, optimizer, scheduler):
             
         for i in range(len(at_student)):        
             loss += adjusted_beta * utils.at_loss(at_student[i], at_teacher[i])
-            
         
         preds = outputs_student.detach().max(dim=1)[1].cpu().numpy()
         targets = labels.cpu().numpy()
@@ -267,8 +267,8 @@ if __name__ == '__main__':
     
     # Setup dataloader
     train_dst, val_dst = get_dataset(opts)
-    train_loader = data.DataLoader(train_dst, batch_size=opts.batch_size, shuffle=True, num_workers=8)
-    val_loader = data.DataLoader(val_dst, batch_size=opts.val_batch_size, shuffle=True, num_workers=8)
+    train_loader = data.DataLoader(train_dst, batch_size=opts.batch_size, shuffle=True, num_workers=opts.num_workers)
+    val_loader = data.DataLoader(val_dst, batch_size=opts.val_batch_size, shuffle=True, num_workers=opts.num_workers)
     print("Dataset: %s, Train set: %d, Val set: %d" %
           (opts.dataset, len(train_dst), len(val_dst)))
     

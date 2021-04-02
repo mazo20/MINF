@@ -191,7 +191,6 @@ def main():
         print(metrics.to_str(score))
         utils.save_result(score, opts)
         
-        utils.save_ckpt(opts.data_root.replace('/input', '') + '/output', opts, model, optimizer, scheduler, best_score, epoch)   
         if score['Mean IoU'] > best_score or (opts.max_epochs != opts.total_epochs and epoch+1 == opts.total_epochs):
             best_score = score['Mean IoU']
             utils.save_ckpt(opts.data_root, opts, model, optimizer, scheduler, best_score, epoch+1) 

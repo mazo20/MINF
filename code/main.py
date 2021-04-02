@@ -181,9 +181,9 @@ def main():
         cur_epochs += 1
         
         if opts.mode == "teacher":
-            train_teacher(model, optimizer, criterion)
+            train_teacher(model, optimizer, criterion, scheduler)
         else:
-            train_student(model, teacher, optimizer)
+            train_student(model, teacher, optimizer, scheduler)
         
         score = validate(model, optimizer, scheduler, best_score, cur_epochs)
         print(metrics.to_str(score))
@@ -195,7 +195,7 @@ def main():
             utils.save_ckpt(opts.results_root, opts, model, optimizer, scheduler, best_score, cur_epochs)  
         
 
-def train_teacher(net, optimizer, criterion):
+def train_teacher(net, optimizer, criterion, scheduler):
     net.train()
     metrics.reset()
     pbar = tqdm(train_loader)
@@ -218,7 +218,7 @@ def train_teacher(net, optimizer, criterion):
         scheduler.step()
         
             
-def train_student(net, teacher, optimizer):
+def train_student(net, teacher, optimizer, scheduler):
     net.train()
     pbar = tqdm(train_loader)
     for images, labels in pbar:

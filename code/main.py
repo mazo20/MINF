@@ -28,7 +28,7 @@ def get_argparser():
     parser.add_argument("--teacher_model", type=str, default='v3plus_resnet50',choices=['v3_resnet50',  'v3plus_resnet50',
                                  'v3_resnet101', 'v3plus_resnet101', 'v3_mobilenet', 'v3plus_mobilenet'], help='model name')
     parser.add_argument("--separable_conv", action='store_true', default=False,help="apply separable conv to decoder and aspp")
-    parser.add_argument("--separable", default='none', choices=['none', 'bottleneck', 'grouped'])
+    parser.add_argument("--separable", default='none', type=str, choices=['none', 'bottleneck', 'grouped'])
     parser.add_argument("--output_stride", type=int, default=16, choices=[8, 16, 32])
 
     # Train Options
@@ -76,7 +76,7 @@ def mkdirs(opts):
     utils.mkdir('results')
     utils.mkdir(opts.results_root)
 
-def validate(model, optimizer, scheduler, best_score, cur_epochs):
+def validate(model):
     
     model.eval()
     metrics.reset()
@@ -125,7 +125,8 @@ def main():
     
     model = model_map[opts.model](num_classes=opts.num_classes, output_stride=opts.output_stride)
     teacher = None
-    if opts.separable is not 'none': #and 'plus' in opts.model:
+    print(opts.separable)
+    if opts.separable != 'none': #and 'plus' in opts.model:
         # print(opts.separable)
         network.deeplab.convert_to_separable_conv(model.classifier, opts.separable == 'bottleneck')
         # network.deeplab.convert_to_separable_conv(model.backbone)
@@ -163,7 +164,7 @@ def main():
         model.to(device)
         
     if opts.save_val_results:
-        score = validate(model, optimizer, scheduler, best_score, cur_epochs)
+        score = validate(model)
         print(metrics.to_str(score)) 
         return
     
@@ -186,11 +187,11 @@ def main():
         else:
             train_student(model, teacher, optimizer, scheduler)
         
-        score = validate(model, optimizer, scheduler, best_score, cur_epochs)
+        score = validate(model)
         print(metrics.to_str(score))
         utils.save_result(score, opts)
         
-        utils.save_ckpt(opts.data_root.replace('/input', '') + '/output', opts, model, optimizer, scheduler, best_score, cur_epochs)   
+        utils.save_ckpt(opts.data_root.replace('/input', '') + '/output', opts, model, optimizer, scheduler, best_score, epoch)   
         if score['Mean IoU'] > best_score or (opts.max_epochs != opts.total_epochs and epoch+1 == opts.total_epochs):
             best_score = score['Mean IoU']
             utils.save_ckpt(opts.data_root, opts, model, optimizer, scheduler, best_score, epoch+1) 

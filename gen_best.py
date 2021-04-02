@@ -19,7 +19,7 @@ config = {
     '--results_root': ['results/' + sys.argv[1]],
     '--output_stride': ['16'],
     '--model': ['v3plus_resnet50'],
-    '--separable': ['none'],
+    '--separable': ['none', 'grouped'],
     '--mode': ['teacher'],
     '--batch_size': ['16'], 
     '--crop_size': ['321', '256'] * repeats,

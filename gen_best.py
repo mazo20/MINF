@@ -19,10 +19,10 @@ config = {
     '--results_root': ['results/' + sys.argv[1]],
     '--output_stride': ['16'],
     '--model': ['v3plus_resnet50'],
-    '': ['--separable_conv', ''],
+    '': ['--separable_conv'],
     '--mode': ['teacher'],
     '--batch_size': ['16'], 
-    '--crop_size': ['321'] * repeats,
+    '--crop_size': ['321', '256'] * repeats,
     # '--teacher_ckpt': ['checkpoints/best_plusmobilenet.pth'],
     
 }

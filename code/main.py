@@ -185,8 +185,6 @@ def main():
         else:
             train_student(model, teacher, optimizer)
         
-        scheduler.step()
-        
         score = validate(model, optimizer, scheduler, best_score, cur_epochs)
         print(metrics.to_str(score))
         utils.save_result(score, opts)
@@ -217,6 +215,7 @@ def train_teacher(net, optimizer, criterion):
         optimizer.zero_grad()
         loss.backward()
         optimizer.step()
+        scheduler.step()
         
             
 def train_student(net, teacher, optimizer):
@@ -248,6 +247,7 @@ def train_student(net, teacher, optimizer):
         optimizer.zero_grad()
         loss.backward()
         optimizer.step()
+        scheduler.step()
     
 
 if __name__ == '__main__':

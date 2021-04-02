@@ -28,7 +28,7 @@ def get_argparser():
     parser.add_argument("--teacher_model", type=str, default='v3plus_resnet50',choices=['v3_resnet50',  'v3plus_resnet50',
                                  'v3_resnet101', 'v3plus_resnet101', 'v3_mobilenet', 'v3plus_mobilenet'], help='model name')
     parser.add_argument("--separable_conv", action='store_true', default=False,help="apply separable conv to decoder and aspp")
-    parser.add_argument("--separable", default=None, choices=[None, 'bottleneck', 'grouped'])
+    parser.add_argument("--separable", default='none', choices=['none', 'bottleneck', 'grouped'])
     parser.add_argument("--output_stride", type=int, default=16, choices=[8, 16, 32])
 
     # Train Options
@@ -125,7 +125,7 @@ def main():
     
     model = model_map[opts.model](num_classes=opts.num_classes, output_stride=opts.output_stride)
     teacher = None
-    if opts.separable is not None: #and 'plus' in opts.model:
+    if opts.separable is not 'none': #and 'plus' in opts.model:
         # print(opts.separable)
         network.deeplab.convert_to_separable_conv(model.classifier, opts.separable == 'bottleneck')
         # network.deeplab.convert_to_separable_conv(model.backbone)

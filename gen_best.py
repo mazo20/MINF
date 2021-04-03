@@ -17,11 +17,11 @@ repeats = 1
 
 config = {
     '--results_root': ['results/' + sys.argv[1]],
-    '--output_stride': ['16'],
-    '--model': ['v3plus_resnet50'],
+    '--output_stride': ['16', '32'],
+    '--model': ['v3plus_resnet50', 'v3_resnet50'],
     '--separable': ['none', 'grouped'],
     '--mode': ['teacher'],
-    '--batch_size': ['16'], 
+    '--batch_size': ['16', '32'], 
     '--crop_size': ['321', '256'] * repeats,
     '--random_seed': ['1'],
     # '--teacher_ckpt': ['checkpoints/best_plusmobilenet.pth'],

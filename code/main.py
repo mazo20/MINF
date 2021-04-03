@@ -29,6 +29,7 @@ def get_argparser():
                                  'v3_resnet101', 'v3plus_resnet101', 'v3_mobilenet', 'v3plus_mobilenet'], help='model name')
     parser.add_argument("--separable_conv", action='store_true', default=False,help="apply separable conv to decoder and aspp")
     parser.add_argument("--separable", default='none', type=str, choices=['none', 'bottleneck', 'grouped'])
+    parser.add_argument("--kernel_sharing", type=str, choices=['true', 'false'], default='false')
     parser.add_argument("--output_stride", type=int, default=16, choices=[8, 16, 32])
 
     # Train Options
@@ -63,6 +64,8 @@ def get_argparser():
     parser.add_argument("--score_interval", type=int, default=1, help="number of iterations for score printint")
     
     opts = parser.parse_args()
+    
+    print(opts)
     
     if opts.dataset.lower() == 'voc':
         opts.num_classes = 21
@@ -123,12 +126,12 @@ def main():
     best_score = 0.0
     epoch      = 0
     
-    model = model_map[opts.model](num_classes=opts.num_classes, output_stride=opts.output_stride)
+    model = model_map[opts.model](num_classes=opts.num_classes, output_stride=opts.output_stride, opts=opts)
     teacher = None
     print(opts.separable)
-    if opts.separable != 'none': #and 'plus' in opts.model:
+    # if opts.separable != 'none': #and 'plus' in opts.model:
         # print(opts.separable)
-        network.deeplab.convert_to_separable_conv(model.classifier, opts.separable == 'bottleneck')
+        # network.deeplab.convert_to_separable_conv(model.classifier, opts.separable == 'bottleneck')
         # network.deeplab.convert_to_separable_conv(model.backbone)
     utils.set_bn_momentum(model.backbone, momentum=0.01)
     

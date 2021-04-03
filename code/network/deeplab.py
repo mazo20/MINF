@@ -26,7 +26,7 @@ class DeepLabV3(_SimpleSegmentationModel):
     pass
 
 class DeepLabHeadV3Plus(nn.Module):
-    def __init__(self, in_channels, low_level_channels, num_classes, aspp_dilate=[12, 24, 36]):
+    def __init__(self, in_channels, low_level_channels, num_classes, aspp_dilate=[12, 24, 36], opts=None):
         super(DeepLabHeadV3Plus, self).__init__()
         self.project = nn.Sequential( 
             nn.Conv2d(low_level_channels, 48, 1, bias=False),
@@ -34,10 +34,10 @@ class DeepLabHeadV3Plus(nn.Module):
             nn.ReLU(inplace=True),
         )
 
-        self.aspp = ASPP(in_channels, aspp_dilate)
+        self.aspp = ASPP(in_channels, aspp_dilate, opts)
 
         self.classifier = nn.Sequential(
-            nn.Conv2d(304, 256, 3, padding=1, bias=False),
+            AtrousSeparableConvolution(304, 256, 3, padding=1, bias=False, opts=opts),
             nn.BatchNorm2d(256),
             nn.ReLU(inplace=True),
             nn.Conv2d(256, num_classes, 1)
@@ -59,12 +59,12 @@ class DeepLabHeadV3Plus(nn.Module):
                 nn.init.constant_(m.bias, 0)
 
 class DeepLabHead(nn.Module):
-    def __init__(self, in_channels, num_classes, aspp_dilate=[12, 24, 36]):
+    def __init__(self, in_channels, num_classes, aspp_dilate=[12, 24, 36], opts=None):
         super(DeepLabHead, self).__init__()
 
         self.classifier = nn.Sequential(
-            ASPP(in_channels, aspp_dilate),
-            nn.Conv2d(256, 256, 3, padding=1, bias=False),
+            ASPP(in_channels, aspp_dilate, opts),
+            AtrousSeparableConvolution(256, 256, 3, padding=1, bias=False, opts=opts),
             nn.BatchNorm2d(256),
             nn.ReLU(inplace=True),
             nn.Conv2d(256, num_classes, 1)
@@ -86,9 +86,17 @@ class AtrousSeparableConvolution(nn.Module):
     """ Atrous Separable Convolution
     """
     def __init__(self, in_channels, out_channels, kernel_size,
-                            stride=1, padding=0, dilation=1, bias=True, withBottleneck=False):
+                            stride=1, padding=0, dilation=1, bias=True, opts=None):
         super(AtrousSeparableConvolution, self).__init__()
-        if withBottleneck:
+        
+        if opts.separable == 'grouped':
+            self.body = nn.Sequential(
+                # Separable Conv
+                nn.Conv2d( in_channels, in_channels, kernel_size=kernel_size, stride=stride, padding=padding, dilation=dilation, bias=bias, groups=in_channels ),
+                # PointWise Conv
+                nn.Conv2d( in_channels, out_channels, kernel_size=1, stride=1, padding=0, bias=bias),
+            )
+        elif opts.separable == 'bottleneck':
             bottleneck = out_channels // 4
             self.body = nn.Sequential(
                 # Bottleneck
@@ -101,15 +109,13 @@ class AtrousSeparableConvolution(nn.Module):
                 nn.Conv2d( bottleneck, out_channels, kernel_size=1, stride=1, padding=0, bias=bias),
             )
         else:
+            '''
+            No separable convolution
+            '''
             self.body = nn.Sequential(
-                # Separable Conv
-                nn.Conv2d( in_channels, in_channels, kernel_size=kernel_size, stride=stride, padding=padding, dilation=dilation, bias=bias, groups=in_channels ),
-                # PointWise Conv
-                nn.Conv2d( in_channels, out_channels, kernel_size=1, stride=1, padding=0, bias=bias),
+                nn.Conv2d(in_channels, out_channels, kernel_size=kernel_size, stride=stride, padding=padding, dilation=dilation, bias=bias),
             )
-            
-        
-        
+                
         
         self._init_weight()
 
@@ -125,9 +131,9 @@ class AtrousSeparableConvolution(nn.Module):
                 nn.init.constant_(m.bias, 0)
 
 class ASPPConv(nn.Sequential):
-    def __init__(self, in_channels, out_channels, dilation):
+    def __init__(self, in_channels, out_channels, dilation, opts):
         modules = [
-            nn.Conv2d(in_channels, out_channels, 3, padding=dilation, dilation=dilation, bias=False),
+            AtrousSeparableConvolution(in_channels, out_channels, 3, padding=dilation, dilation=dilation, bias=False, opts=opts),
             nn.BatchNorm2d(out_channels),
             nn.ReLU(inplace=True)
         ]
@@ -147,20 +153,54 @@ class ASPPPooling(nn.Sequential):
         return F.interpolate(x, size=size, mode='bilinear', align_corners=False)
 
 class ASPP(nn.Module):
-    def __init__(self, in_channels, atrous_rates):
+    def __init__(self, in_channels, atrous_rates, opts):
         super(ASPP, self).__init__()
+        self.opts = opts
         out_channels = 256
-        modules = []
-        modules.append(nn.Sequential(
-            nn.Conv2d(in_channels, out_channels, 1, bias=False),
-            nn.BatchNorm2d(out_channels),
-            nn.ReLU(inplace=True)))
-
         rate1, rate2, rate3 = tuple(atrous_rates)
-        modules.append(ASPPConv(in_channels, out_channels, rate1))
-        modules.append(ASPPConv(in_channels, out_channels, rate2))
-        modules.append(ASPPConv(in_channels, out_channels, rate3))
-        modules.append(ASPPPooling(in_channels, out_channels))
+        
+        modules = [
+            nn.Sequential(
+                nn.Conv2d(in_channels, out_channels, 1, bias=False),
+                nn.BatchNorm2d(out_channels),
+                nn.ReLU(inplace=True)),
+            ASPPConv(in_channels, out_channels, rate1, opts),
+            ASPPConv(in_channels, out_channels, rate2, opts),
+            ASPPConv(in_channels, out_channels, rate3, opts),
+            ASPPPooling(in_channels, out_channels)
+        ]
+        
+        if opts.kernel_sharing == 'true':
+            # print(modules[1].state_dict())
+            
+            # for m in modules[3][0].modules():
+            #     # print(m.modules())
+            #     # break
+            #     for layer in m.modules():
+            #         print(layer)
+            #         break
+            
+            shared_weights = []
+            
+            
+            for child in modules[1][0].children():
+                for m in child.children():
+                    shared_weights.append(m.weight)
+                
+            for child in modules[2][0].children():
+                for i, m in enumerate(child.children()):
+                    m.weight = shared_weights[i]
+                    
+            for child in modules[3][0].children():
+                for i, m in enumerate(child.children()):
+                    m.weight = shared_weights[i]
+            
+            # print(modules[2][0].weight)
+            
+            # modules[3].state_dict() = modules[1].state_dict()
+            # modules[2].state_dict() = modules[1].state_dict()
+            # modules[3][0].weight  = modules[1][0].weight
+            # modules[2][0].weight  = modules[1][0].weight
 
         self.convs = nn.ModuleList(modules)
 

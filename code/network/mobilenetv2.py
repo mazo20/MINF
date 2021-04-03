@@ -50,7 +50,7 @@ class InvertedResidual(nn.Module):
             return self.conv(x_pad)
 
 class MobileNetV2(nn.Module):
-    def __init__(self, num_classes=1000, output_stride=8, width_mult=1.0, inverted_residual_setting=None, round_nearest=8):
+    def __init__(self, num_classes=1000, output_stride=8, width_mult=1.0, inverted_residual_setting=None, round_nearest=8, opts=None):
         """
         MobileNet V2 main class
 

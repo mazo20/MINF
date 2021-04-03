@@ -22,9 +22,9 @@ config = {
     '--separable': ['none', 'grouped'],
     '--mode': ['teacher'],
     '--batch_size': ['16'], 
-    '--crop_size': ['321', '256'] * repeats,
+    '--crop_size': ['256'] * repeats,
     '--random_seed': ['1'],
-    # '--teacher_ckpt': ['checkpoints/best_plusmobilenet.pth'],
+    '--teacher_ckpt': ['v3plus_resnet50_256_os16_none.pth'],
     
 }
 

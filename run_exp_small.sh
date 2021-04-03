@@ -10,4 +10,4 @@ mv -f code.zip results/$2
 
 
 
-run_experiment -b deeplab_arrayjob.sh -e results/$2/experiment.txt \ --cpus-per-task=4 --gres=gpu:1 --mem=12000 --exclude=damnii[06]
+run_experiment -b deeplab_arrayjob.sh -e results/$2/experiment.txt -m 32 \ --cpus-per-task=4 --gres=gpu:1 --mem=12000 --exclude=damnii[06]

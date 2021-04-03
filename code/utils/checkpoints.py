@@ -18,5 +18,6 @@ def save_ckpt(path, opts, model, optimizer, scheduler, best_score, epoch):
             "model_state":     model.module.state_dict(),
             "optimizer_state": optimizer.state_dict(),
             "scheduler_state": scheduler.state_dict(),
+            "teacher_opts": vars(opts)
         }, path)
         print("Model saved as %s" % path)

@@ -186,14 +186,20 @@ class ASPP(nn.Module):
             for child in modules[1][0].children():
                 for m in child.children():
                     shared_weights.append(m.weight)
+                    if opts.only_3_kernel_sharing == 'true':
+                        break
                 
             for child in modules[2][0].children():
                 for i, m in enumerate(child.children()):
                     m.weight = shared_weights[i]
+                    if opts.only_3_kernel_sharing == 'true':
+                        break
                     
             for child in modules[3][0].children():
                 for i, m in enumerate(child.children()):
                     m.weight = shared_weights[i]
+                    if opts.only_3_kernel_sharing == 'true':
+                        break
             
             # print(modules[2][0].weight)
             

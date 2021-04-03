@@ -30,6 +30,7 @@ def get_argparser():
     parser.add_argument("--separable_conv", action='store_true', default=False,help="apply separable conv to decoder and aspp")
     parser.add_argument("--separable", default='none', type=str, choices=['none', 'bottleneck', 'grouped'])
     parser.add_argument("--kernel_sharing", type=str, choices=['true', 'false'], default='false')
+    parser.add_argument("--only_3_kernel_sharing", type=str, choices=['true', 'false'], default='false')
     parser.add_argument("--output_stride", type=int, default=16, choices=[8, 16, 32])
 
     # Train Options
@@ -172,9 +173,11 @@ def main():
         return
     
     if opts.mode == "student":
-        teacher = model_map[opts.teacher_model](num_classes=opts.num_classes, output_stride=16)
-            
         checkpoint = torch.load(opts.teacher_ckpt, map_location=torch.device('cpu'))
+        
+        teacher_opts = utils.Bunch(checkpoint['teacher_opts'])
+        
+        teacher = model_map[opts.teacher_model](num_classes=opts.num_classes, output_stride=teacher_opts.output_stride, opts=teacher_opts)
         teacher.load_state_dict(checkpoint["model_state"])
         teacher = nn.DataParallel(teacher)
         teacher.to(device)

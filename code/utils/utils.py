@@ -36,3 +36,7 @@ def fix_bn(model):
 def mkdir(path):
     if not os.path.exists(path):
         os.mkdir(path)
+        
+class Bunch(object):
+  def __init__(self, adict):
+    self.__dict__.update(adict)

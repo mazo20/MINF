@@ -17,11 +17,11 @@ repeats = 1
 
 config = {
     '--results_root': ['results/' + sys.argv[1]],
-    '--output_stride': ['16', '32'],
-    '--model': ['v3plus_resnet50', 'v3_resnet50'],
-    '--separable': ['none', 'grouped', 'bottleneck'],
+    '--output_stride': ['16'],
+    '--model': ['v3plus_resnet50'],
+    '--separable': ['none', 'grouped'],
     '--mode': ['teacher'],
-    '--kernel_sharing': ['true', 'false'],
+    '--kernel_sharing': ['true --only_3_kernel_sharing true', 'true --only_3_kernel_sharing false', 'false'],
     '--batch_size': ['16'], 
     '--crop_size': ['256'] * repeats,
     '--random_seed': ['1'],

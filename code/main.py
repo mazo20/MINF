@@ -95,9 +95,6 @@ def validate(model):
             labels = labels.to(device, dtype=torch.long)
             
             outputs, ints = model(images)
-            print(len(ints))
-            for i in ints:
-                print(i.shape)
             preds = outputs.detach().max(dim=1)[1].cpu().numpy()
             targets = labels.cpu().numpy()
             

@@ -18,12 +18,12 @@ repeats = 1
 config = {
     '--results_root': ['results/' + sys.argv[1]],
     '--output_stride': ['8'],
-    '--model': ['v3plus_resnet50', 'v3_resnet50'],
+    '--model': ['v3plus_resnet50', 'v3plus_resnet101'],
     '--separable': ['none'],
     '--kernel_sharing': ['true'],
     '--mode': ['teacher'],
     '--batch_size': ['16'], 
-    '--crop_size': ['321', '256'] * repeats,
+    '--crop_size': ['256'] * repeats,
     '--random_seed': ['1'],
     # '--teacher_ckpt': ['checkpoints/best_plusmobilenet.pth'],
     

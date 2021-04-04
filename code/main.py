@@ -239,24 +239,21 @@ def train_student(net, teacher, optimizer, criterion, scheduler):
             loss = criterion(outputs_student, labels)
         
         if opts.loss_type == 'both' or opts.loss_type == 'at' and opts.at_type != 'none':
-            if opts.at_type == 'backbone':
-                ints_teacher, ints_student = utils.match_at_layers(ints_teacher, ints_student)  
-                
-            print(len(ints_teacher))   
-                
-            print(ints_teacher[0].shape)
-                
-            if 'aspp' in opts.at_type:
-                if ints_teacher[0].shape[2] != ints_student[0].shape[2]:
-                    for i in range(len(ints_teacher)):
-                        print(ints_teacher[i].shape)
-                        print(ints_student[i].shape)
-                        ints_teacher[i] = F.interpolate(ints_teacher[i], size=ints_student[i].shape[2:], mode='bilinear', align_corners=False)
-            
-            print(ints_teacher[0].shape)   
+            # if opts.at_type == 'backbone':
+            #     ints_teacher, ints_student = utils.match_at_layers(ints_teacher, ints_student)  
+            if 'mobilenet' in opts.model:
+                ints_teacher = [ints_teacher[4]] + [ints_teacher[-1]]
+            else:
+                ints_student = [ints_teacher[0]] + ints_teacher[4:]
+                ints_teacher = [ints_teacher[0]] + ints_teacher[4:]
+         
              
             adjusted_beta = (opts.beta*3)/len(ints_student)    
-            for i in range(len(ints_student)):        
+            for i in range(len(ints_student)): 
+                print(ints_teacher[i].shape)
+                print(ints_student[i].shape)
+                if ints_teacher[i].shape[2] != ints_student[i].shape[2]:
+                    ints_teacher[i] = F.interpolate(ints_teacher[i], size=ints_student[i].shape[2:], mode='bilinear', align_corners=False)
                 loss += adjusted_beta * utils.at_loss(ints_student[i], ints_teacher[i])
         
         preds = outputs_student.detach().max(dim=1)[1].cpu().numpy()

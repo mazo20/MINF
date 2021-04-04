@@ -19,7 +19,7 @@ class _SimpleSegmentationModel(nn.Module):
         
         
         if self.opts.at_type == 'backbone':
-            activations = activations1[3:]
+            activations = activations1
         elif self.opts.at_type == 'none':
             activations = []
         else:

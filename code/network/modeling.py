@@ -63,7 +63,7 @@ def _segm_mobilenet(name, backbone_name, num_classes, output_stride, pretrained_
     
     backbone = IntermediateLayerGetter(backbone, return_layers=return_layers)
 
-    model = DeepLabV3(backbone, classifier)
+    model = DeepLabV3(backbone, classifier, opts)
     return model
 
 def _load_model(arch_type, backbone, num_classes, output_stride, pretrained_backbone, opts):

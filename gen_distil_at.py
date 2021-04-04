@@ -20,7 +20,7 @@ config = {
     '--output_stride': ['32'],
     '--model': ['v3plus_resnet50'],
     '--separable': ['none', 'grouped'],
-    '--at_type': ['backbone', 'aspp-output', 'aspp-atrous', 'aspp-all']
+    '--at_type': ['backbone', 'aspp-output', 'aspp-atrous', 'aspp-all'],
     '--loss_type': ['both', 'at'],
     '--mode': ['student'],
     '--batch_size': ['16'], 

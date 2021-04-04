@@ -17,9 +17,10 @@ repeats = 1
 
 config = {
     '--results_root': ['results/' + sys.argv[1]],
-    '--output_stride': ['16', '32'],
+    '--output_stride': ['8'],
     '--model': ['v3plus_resnet50', 'v3_resnet50'],
-    '--separable': ['none', 'grouped'],
+    '--separable': ['none'],
+    '--kernel_sharing': ['true'],
     '--mode': ['teacher'],
     '--batch_size': ['16'], 
     '--crop_size': ['321', '256'] * repeats,

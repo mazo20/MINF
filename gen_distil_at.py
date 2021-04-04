@@ -20,7 +20,7 @@ config = {
     '--output_stride': ['32'],
     '--model': ['v3plus_resnet50'],
     '--separable': ['none', 'grouped'],
-    '--kernel_sharing': ['true']
+    '--kernel_sharing': ['true'],
     '--at_type': ['backbone', 'aspp-output', 'aspp-atrous', 'aspp-all'],
     '--loss_type': ['at'],
     '--mode': ['student'],

@@ -6,15 +6,19 @@ import os
 import csv
 import torch.nn.functional as F
 
-def save_images(loader, image, target, pred, attention_maps, denorm, img_id):
+def save_images(loader, image, target, pred, attention_maps, denorm, img_id, root):
+    root = root + '/images'
+    if not os.path.exists(root):
+        os.mkdir(root)
+        
     image = image.detach().cpu().numpy()
     image = (denorm(image) * 255).transpose(1, 2, 0).astype(np.uint8)
     target = loader.dataset.decode_target(target).astype(np.uint8)
     pred = loader.dataset.decode_target(pred).astype(np.uint8)
 
-    Image.fromarray(image).save('results/%d_image.png' % img_id)
-    Image.fromarray(target).save('results/%d_target.png' % img_id)
-    Image.fromarray(pred).save('results/%d_pred.png' % img_id)
+    Image.fromarray(image).save( '%s/%d_image.png'  % (root, img_id))
+    Image.fromarray(target).save('%s/%d_target.png' % (root, img_id))
+    Image.fromarray(pred).save(  '%s/%d_pred.png'   % (root, img_id))
 
     fig = plt.figure()
     plt.imshow(image)
@@ -23,7 +27,7 @@ def save_images(loader, image, target, pred, attention_maps, denorm, img_id):
     ax = plt.gca()
     ax.xaxis.set_major_locator(matplotlib.ticker.NullLocator())
     ax.yaxis.set_major_locator(matplotlib.ticker.NullLocator())
-    plt.savefig('results/%d_overlay.png' % img_id, bbox_inches='tight', pad_inches=0)
+    plt.savefig('%s/%d_overlay.png' % (root, img_id), bbox_inches='tight', pad_inches=0)
     plt.close()
     
     
@@ -38,7 +42,7 @@ def save_images(loader, image, target, pred, attention_maps, denorm, img_id):
         ax = plt.gca()
         ax.xaxis.set_major_locator(matplotlib.ticker.NullLocator())
         ax.yaxis.set_major_locator(matplotlib.ticker.NullLocator())
-        plt.savefig('results/%d_at_%d.png' % (img_id, i), bbox_inches='tight', pad_inches=0)
+        plt.savefig('%s/%d_at_%d.png' % (root, img_id, i), bbox_inches='tight', pad_inches=0)
         plt.close()
     
 def save_at_map(map):

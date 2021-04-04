@@ -5,16 +5,26 @@ import torch.nn.functional as F
 from collections import OrderedDict
 
 class _SimpleSegmentationModel(nn.Module):
-    def __init__(self, backbone, classifier):
+    def __init__(self, backbone, classifier, opts):
         super(_SimpleSegmentationModel, self).__init__()
         self.backbone = backbone
         self.classifier = classifier
+        self.opts = opts
         
     def forward(self, x):
         input_shape = x.shape[-2:]
-        features, activations = self.backbone(x)
-        x = self.classifier(features)
+        features, activations1 = self.backbone(x)
+        x, activations2 = self.classifier(features)
         x = F.interpolate(x, size=input_shape, mode='bilinear', align_corners=False)
+        
+        
+        if self.opts.at_type == 'backbone':
+            activations = activations1[3:]
+        elif self.opts.at_type == 'none':
+            activations = []
+        else:
+            activations = activations2
+        
         return x, activations
 
 

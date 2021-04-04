@@ -12,6 +12,7 @@ import random
 from dataset import *
 import network
 from datetime import date
+from torch.nn import functional as F
 
 def get_argparser():
     parser = argparse.ArgumentParser()
@@ -32,6 +33,7 @@ def get_argparser():
     parser.add_argument("--kernel_sharing", type=str, choices=['true', 'false'], default='false')
     parser.add_argument("--only_3_kernel_sharing", type=str, choices=['true', 'false'], default='false')
     parser.add_argument("--output_stride", type=int, default=16, choices=[8, 16, 32])
+    parser.add_argument("--at_type", type=str, default='none',  choices=['none', 'backbone', 'aspp-output', 'aspp-atrous', 'aspp-all'])
 
     # Train Options
     parser.add_argument("--test_only", action='store_true', default=False)
@@ -49,7 +51,6 @@ def get_argparser():
     parser.add_argument('--temperature', default=4, type=float, help='temp for KD')
     parser.add_argument('--alpha', default=0.9, type=float, help='alpha for KD')
     parser.add_argument('--beta', default=1e3, type=float, help='beta for AT')
-    parser.add_argument('--aux_loss', default='AT', type=str, help='AT or SE loss')
     
     parser.add_argument("--ckpt", default=None, type=str,help="restore from checkpoint")
     parser.add_argument("--teacher_ckpt", default=None, type=str,help="restore teacher from checkpoint")
@@ -65,8 +66,6 @@ def get_argparser():
     parser.add_argument("--score_interval", type=int, default=1, help="number of iterations for score printint")
     
     opts = parser.parse_args()
-    
-    print(opts)
     
     if opts.dataset.lower() == 'voc':
         opts.num_classes = 21
@@ -96,6 +95,9 @@ def validate(model):
             labels = labels.to(device, dtype=torch.long)
             
             outputs, ints = model(images)
+            print(len(ints))
+            for i in ints:
+                print(i.shape)
             preds = outputs.detach().max(dim=1)[1].cpu().numpy()
             targets = labels.cpu().numpy()
             
@@ -105,7 +107,7 @@ def validate(model):
             if opts.save_val_results:
                 for i in range(len(images)):
                     at_maps = [ints[j][i] for j in range(len(ints))]
-                    utils.save_images(val_loader, images[i], targets[i], preds[i], at_maps, denorm, img_id)
+                    utils.save_images(val_loader, images[i], targets[i], preds[i], at_maps, denorm, img_id, opts.results_root)
                     img_id += 1 
                         
         score = metrics.get_results()
@@ -129,11 +131,6 @@ def main():
     
     model = model_map[opts.model](num_classes=opts.num_classes, output_stride=opts.output_stride, opts=opts)
     teacher = None
-    print(opts.separable)
-    # if opts.separable != 'none': #and 'plus' in opts.model:
-        # print(opts.separable)
-        # network.deeplab.convert_to_separable_conv(model.classifier, opts.separable == 'bottleneck')
-        # network.deeplab.convert_to_separable_conv(model.backbone)
     utils.set_bn_momentum(model.backbone, momentum=0.01)
     
     macs, params = utils.count_flops(model, opts)
@@ -174,6 +171,7 @@ def main():
     
     if opts.mode == "student":
         checkpoint = torch.load(opts.teacher_ckpt, map_location=torch.device('cpu'))
+        checkpoint['teacher_opts']['at_type'] = opts.at_type
         
         teacher_opts = utils.Bunch(checkpoint['teacher_opts'])
         
@@ -237,12 +235,26 @@ def train_student(net, teacher, optimizer, scheduler):
         
         loss = utils.distillation(outputs_student, outputs_teacher, labels, opts.temperature, opts.alpha)
         
-        at_teacher, at_student = utils.match_at_layers(ints_teacher, ints_student)  
-        
-        adjusted_beta = (opts.beta*3)/len(at_student)    
+        if opts.at_type != 'none':
+            if opts.at_type == 'backbone':
+                ints_teacher, ints_student = utils.match_at_layers(ints_teacher, ints_student)  
+                
+            print(len(ints_teacher))   
+                
+            print(ints_teacher[0].shape)
+                
+            if 'aspp' in opts.at_type:
+                if ints_teacher[0].shape[2] != ints_student[0].shape[2]:
+                    for i in range(len(ints_teacher)):
+                        print(ints_teacher[i].shape)
+                        print(ints_student[i].shape)
+                        ints_teacher[i] = F.interpolate(ints_teacher[i], size=ints_student[i].shape[2:], mode='bilinear', align_corners=False)
             
-        for i in range(len(at_student)):        
-            loss += adjusted_beta * utils.at_loss(at_student[i], at_teacher[i])
+            print(ints_teacher[0].shape)   
+             
+            adjusted_beta = (opts.beta*3)/len(ints_student)    
+            for i in range(len(ints_student)):        
+                loss += adjusted_beta * utils.at_loss(ints_student[i], ints_teacher[i])
         
         preds = outputs_student.detach().max(dim=1)[1].cpu().numpy()
         targets = labels.cpu().numpy()

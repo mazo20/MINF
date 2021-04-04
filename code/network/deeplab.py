@@ -46,9 +46,9 @@ class DeepLabHeadV3Plus(nn.Module):
 
     def forward(self, feature):
         low_level_feature = self.project( feature['low_level'] )
-        output_feature = self.aspp(feature['out'])
+        output_feature, activations = self.aspp(feature['out'])
         output_feature = F.interpolate(output_feature, size=low_level_feature.shape[2:], mode='bilinear', align_corners=False)
-        return self.classifier( torch.cat( [ low_level_feature, output_feature ], dim=1 ) )
+        return self.classifier( torch.cat( [ low_level_feature, output_feature ], dim=1 ) ), activations
     
     def _init_weight(self):
         for m in self.modules():
@@ -61,9 +61,10 @@ class DeepLabHeadV3Plus(nn.Module):
 class DeepLabHead(nn.Module):
     def __init__(self, in_channels, num_classes, aspp_dilate=[12, 24, 36], opts=None):
         super(DeepLabHead, self).__init__()
+        
+        self.aspp = ASPP(in_channels, aspp_dilate, opts)
 
         self.classifier = nn.Sequential(
-            ASPP(in_channels, aspp_dilate, opts),
             AtrousSeparableConvolution(256, 256, 3, padding=1, bias=False, opts=opts),
             nn.BatchNorm2d(256),
             nn.ReLU(inplace=True),
@@ -72,7 +73,9 @@ class DeepLabHead(nn.Module):
         self._init_weight()
 
     def forward(self, feature):
-        return self.classifier( feature['out'] )
+        out, activations = self.aspp(feature['out'])
+        return self.classifier(out), activations
+        
 
     def _init_weight(self):
         for m in self.modules():
@@ -171,17 +174,7 @@ class ASPP(nn.Module):
         ]
         
         if opts.kernel_sharing == 'true':
-            # print(modules[1].state_dict())
-            
-            # for m in modules[3][0].modules():
-            #     # print(m.modules())
-            #     # break
-            #     for layer in m.modules():
-            #         print(layer)
-            #         break
-            
             shared_weights = []
-            
             
             for child in modules[1][0].children():
                 for m in child.children():
@@ -201,13 +194,6 @@ class ASPP(nn.Module):
                     if opts.only_3_kernel_sharing == 'true':
                         break
             
-            # print(modules[2][0].weight)
-            
-            # modules[3].state_dict() = modules[1].state_dict()
-            # modules[2].state_dict() = modules[1].state_dict()
-            # modules[3][0].weight  = modules[1][0].weight
-            # modules[2][0].weight  = modules[1][0].weight
-
         self.convs = nn.ModuleList(modules)
 
         self.project = nn.Sequential(
@@ -218,10 +204,19 @@ class ASPP(nn.Module):
 
     def forward(self, x):
         res = []
+        activations = []
         for conv in self.convs:
-            res.append(conv(x))
+            out = conv(x)
+            res.append(out)
+            if self.opts.at_type == 'aspp-atrous' or self.opts.at_type == 'aspp-all':
+                activations.append(out)
+                
         res = torch.cat(res, dim=1)
-        return self.project(res)
+        out = self.project(res)
+        if self.opts.at_type == 'aspp-output' or self.opts.at_type == 'aspp-all':
+            activations.append(out)
+            
+        return out, activations
 
 
 

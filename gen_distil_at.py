@@ -20,8 +20,9 @@ config = {
     '--output_stride': ['32'],
     '--model': ['v3plus_resnet50'],
     '--separable': ['none', 'grouped'],
+    '--kernel_sharing': ['true']
     '--at_type': ['backbone', 'aspp-output', 'aspp-atrous', 'aspp-all'],
-    '--loss_type': ['both', 'at'],
+    '--loss_type': ['at'],
     '--mode': ['student'],
     '--batch_size': ['16'], 
     '--crop_size': ['256'] * repeats,

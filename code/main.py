@@ -177,7 +177,7 @@ def main():
         
         teacher_opts = utils.Bunch(checkpoint['teacher_opts'])
         
-        teacher = model_map[opts.teacher_model](num_classes=opts.num_classes, output_stride=teacher_opts.output_stride, opts=teacher_opts)
+        teacher = model_map[teacher_opts.model](num_classes=opts.num_classes, output_stride=teacher_opts.output_stride, opts=teacher_opts)
         teacher.load_state_dict(checkpoint["model_state"])
         teacher = nn.DataParallel(teacher)
         teacher.to(device)

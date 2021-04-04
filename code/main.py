@@ -34,6 +34,7 @@ def get_argparser():
     parser.add_argument("--only_3_kernel_sharing", type=str, choices=['true', 'false'], default='false')
     parser.add_argument("--output_stride", type=int, default=16, choices=[8, 16, 32])
     parser.add_argument("--at_type", type=str, default='none',  choices=['none', 'backbone', 'aspp-output', 'aspp-atrous', 'aspp-all'])
+    parser.add_argument("--loss_type", type=str, default='standard', choices=['standard', 'kd', 'at', 'both'])
 
     # Train Options
     parser.add_argument("--test_only", action='store_true', default=False)
@@ -57,7 +58,6 @@ def get_argparser():
     parser.add_argument("--continue_training", action='store_true', default=False)
     parser.add_argument("--mode", type=str, default="teacher", choices=["teacher", "student"], help="training mode")
 
-    parser.add_argument("--loss_type", type=str, default='cross_entropy',choices=['cross_entropy', 'focal_loss'], help="loss type (default: False)")
     parser.add_argument("--gpu_id", type=str, default='0', help="GPU ID")
     parser.add_argument("--weight_decay", type=float, default=1e-4, help='weight decay (default: 1e-4)')
     parser.add_argument("--random_seed", type=int, default=1, help="random seed (default: 1)")
@@ -189,7 +189,7 @@ def main():
         if opts.mode == "teacher":
             train_teacher(model, optimizer, criterion, scheduler)
         else:
-            train_student(model, teacher, optimizer, scheduler)
+            train_student(model, teacher, optimizer, criterion, scheduler)
         
         score = validate(model)
         print(metrics.to_str(score))
@@ -223,7 +223,7 @@ def train_teacher(net, optimizer, criterion, scheduler):
         scheduler.step()
         
             
-def train_student(net, teacher, optimizer, scheduler):
+def train_student(net, teacher, optimizer, criterion, scheduler):
     net.train()
     pbar = tqdm(train_loader)
     for images, labels in pbar:
@@ -233,9 +233,12 @@ def train_student(net, teacher, optimizer, scheduler):
         outputs_student, ints_student = net(images)
         outputs_teacher, ints_teacher = teacher(images)
         
-        loss = utils.distillation(outputs_student, outputs_teacher, labels, opts.temperature, opts.alpha)
+        if opts.loss_type == 'both' or opts.loss_type == 'kd':
+            loss = utils.distillation(outputs_student, outputs_teacher, labels, opts.temperature, opts.alpha)
+        else:
+            loss = criterion(outputs_student, labels)
         
-        if opts.at_type != 'none':
+        if opts.loss_type == 'both' or opts.loss_type == 'at' and opts.at_type != 'none':
             if opts.at_type == 'backbone':
                 ints_teacher, ints_student = utils.match_at_layers(ints_teacher, ints_student)  
                 

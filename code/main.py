@@ -35,7 +35,7 @@ def get_argparser():
     parser.add_argument("--output_stride", type=int, default=16, choices=[8, 16, 32])
     parser.add_argument("--at_type", type=str, default='none',  choices=['none', 'backbone', 'aspp-output', 'aspp-atrous', 'aspp-all'])
     parser.add_argument("--loss_type", type=str, default='standard', choices=['standard', 'kd', 'at', 'both'])
-    parser.add_argument("--large_aspp", type=str, default='normal', choices=['normal', 'large', 'extra_large'])
+    parser.add_argument("--large_aspp", type=str, default='normal', choices=['normal', 'medium', 'large', 'extra_large'])
 
     # Train Options
     parser.add_argument("--test_only", action='store_true', default=False)

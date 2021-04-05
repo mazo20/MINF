@@ -140,6 +140,15 @@ class ASPPConv(nn.Sequential):
             nn.BatchNorm2d(out_channels),
             nn.ReLU(inplace=True)
         ]
+        if opts.large_aspp == 'true':
+            modules = [
+                AtrousSeparableConvolution(in_channels, 2*out_channels, 3, padding=dilation, dilation=dilation, bias=False, opts=opts),
+                nn.BatchNorm2d(2*out_channels),
+                AtrousSeparableConvolution(2*out_channels, out_channels, 3, padding=dilation, dilation=dilation, bias=False, opts=opts),
+                nn.BatchNorm2d(out_channels),
+                nn.ReLU(inplace=True)
+            ]
+            
         super(ASPPConv, self).__init__(*modules)
 
 class ASPPPooling(nn.Sequential):

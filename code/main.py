@@ -35,7 +35,7 @@ def get_argparser():
     parser.add_argument("--output_stride", type=int, default=16, choices=[8, 16, 32])
     parser.add_argument("--at_type", type=str, default='none',  choices=['none', 'backbone', 'aspp-output', 'aspp-atrous', 'aspp-all'])
     parser.add_argument("--loss_type", type=str, default='standard', choices=['standard', 'kd', 'at', 'both'])
-    parser.add_argument("--large_aspp", type=str, default='false', choices=['true', 'false'])
+    parser.add_argument("--large_aspp", type=str, default='normal', choices=['normal', 'large', 'extra_large'])
 
     # Train Options
     parser.add_argument("--test_only", action='store_true', default=False)
@@ -248,8 +248,6 @@ def train_student(net, teacher, optimizer, criterion, scheduler):
              
             adjusted_beta = (opts.beta*3)/len(ints_student)    
             for i in range(len(ints_student)): 
-                print(ints_teacher[i].shape)
-                print(ints_student[i].shape)
                 if ints_teacher[i].shape[2] != ints_student[i].shape[2]:
                     ints_teacher[i] = F.interpolate(ints_teacher[i], size=ints_student[i].shape[2:], mode='bilinear', align_corners=False)
                 loss += adjusted_beta * utils.at_loss(ints_student[i], ints_teacher[i])

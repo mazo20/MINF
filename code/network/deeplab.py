@@ -140,9 +140,19 @@ class ASPPConv(nn.Sequential):
             nn.BatchNorm2d(out_channels),
             nn.ReLU(inplace=True)
         ]
-        if opts.large_aspp == 'true':
+        if opts.large_aspp == 'large':
             modules = [
                 AtrousSeparableConvolution(in_channels, 2*out_channels, 3, padding=dilation, dilation=dilation, bias=False, opts=opts),
+                nn.BatchNorm2d(2*out_channels),
+                AtrousSeparableConvolution(2*out_channels, out_channels, 3, padding=dilation, dilation=dilation, bias=False, opts=opts),
+                nn.BatchNorm2d(out_channels),
+                nn.ReLU(inplace=True)
+            ]
+        elif opts.large_aspp == 'extra_large':
+            modules = [
+                AtrousSeparableConvolution(in_channels, 4*out_channels, 3, padding=dilation, dilation=dilation, bias=False, opts=opts),
+                nn.BatchNorm2d(4*out_channels),
+                AtrousSeparableConvolution(4*out_channels, 2*out_channels, 3, padding=dilation, dilation=dilation, bias=False, opts=opts),
                 nn.BatchNorm2d(2*out_channels),
                 AtrousSeparableConvolution(2*out_channels, out_channels, 3, padding=dilation, dilation=dilation, bias=False, opts=opts),
                 nn.BatchNorm2d(out_channels),

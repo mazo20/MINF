@@ -18,16 +18,15 @@ repeats = 1
 config = {
     '--results_root': ['results/' + sys.argv[1]],
     '--output_stride': ['16', '32'],
-    '--model': ['v3plus_mobilenet'],
-    '--separable': ['none', 'grouped'],
-    '--mode': ['student'],
+    '--model': ['v3plus_resnet50', 'v3plus_mobilenet'],
+    '--separable': ['grouped', 'bottleneck'],
+    '--mode': ['teacher'],
+    '--kernel_sharing': ['true', 'false'],
+    '--large_aspp': ['large', 'extra_large'],
     '--batch_size': ['16'], 
     '--crop_size': ['256'] * repeats,
     '--random_seed': ['1'],
-    '--teacher_ckpt': ['bestV3Plus256.pth'],
-    '--kernel_sharing': ['true'],
-    '--at_type': ['aspp-all'],
-    '--loss_type': ['at'],
+    # '--teacher_ckpt': ['checkpoints/best_plusmobilenet.pth'],
     
 }
 

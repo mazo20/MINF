@@ -31,19 +31,19 @@ def save_images(loader, image, target, pred, attention_maps, denorm, img_id, roo
     plt.close()
     
     
-    for i in range(len(attention_maps)):
-        fig = plt.figure()
-        plt.imshow(image)
-        plt.axis('off')
+    # for i in range(len(attention_maps)):
+    #     fig = plt.figure()
+    #     plt.imshow(image)
+    #     plt.axis('off')
         
-        at_map = F.interpolate(attention_maps[i].pow(2).mean(0).unsqueeze(0).unsqueeze(0), size=image.shape[:2], mode='bilinear', align_corners=False).squeeze(0).squeeze(0)
+    #     at_map = F.interpolate(attention_maps[i].pow(2).mean(0).unsqueeze(0).unsqueeze(0), size=image.shape[:2], mode='bilinear', align_corners=False).squeeze(0).squeeze(0)
         
-        plt.imshow(at_map, interpolation='bicubic', alpha=0.7)
-        ax = plt.gca()
-        ax.xaxis.set_major_locator(matplotlib.ticker.NullLocator())
-        ax.yaxis.set_major_locator(matplotlib.ticker.NullLocator())
-        plt.savefig('%s/%d_at_%d.png' % (root, img_id, i), bbox_inches='tight', pad_inches=0)
-        plt.close()
+    #     plt.imshow(at_map, interpolation='bicubic', alpha=0.7)
+    #     ax = plt.gca()
+    #     ax.xaxis.set_major_locator(matplotlib.ticker.NullLocator())
+    #     ax.yaxis.set_major_locator(matplotlib.ticker.NullLocator())
+    #     plt.savefig('%s/%d_at_%d.png' % (root, img_id, i), bbox_inches='tight', pad_inches=0)
+    #     plt.close()
     
 def save_at_map(map):
     plt.imshow(map, interpolation='bicubic')

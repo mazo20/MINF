@@ -113,7 +113,7 @@ def validate(model):
     model.train()
     return score
 
-def main():
+def main(opts):
     # Set up model
     model_map = {
         'v3_resnet50': network.deeplabv3_resnet50,
@@ -126,6 +126,10 @@ def main():
     
     best_score = 0.0
     epoch      = 0
+    
+    if opts.ckpt is not None and os.path.isfile(opts.ckpt):
+        checkpoint = torch.load(opts.ckpt, map_location=torch.device('cpu'))
+        opts = utils.Bunch(checkpoint['teacher_opts'])
     
     model = model_map[opts.model](num_classes=opts.num_classes, output_stride=opts.output_stride, opts=opts)
     teacher = None
@@ -149,6 +153,8 @@ def main():
     # Load from checkpoint
     if opts.ckpt is not None and os.path.isfile(opts.ckpt):
         checkpoint = torch.load(opts.ckpt, map_location=torch.device('cpu'))
+        
+        
         model.load_state_dict(checkpoint["model_state"])
         model = nn.DataParallel(model)
         model.to(device)
@@ -282,6 +288,6 @@ if __name__ == '__main__':
     # Set up metrics
     metrics = utils.StreamSegMetrics(opts.num_classes)
     
-    main()
+    main(opts)
     
     # python code/main.py  --data_root /disk/scratch/s1762992/deeplab/datasets/data/input --crop_val --batch_size 16  --gpu_id 0,1,2,3 --model deeplabv3_mobilenet --crop_size 128 --output_stride 32 --mode student --ckpt checkpoints/best_deeplabv3_mobilenet_voc_os16_2.pth

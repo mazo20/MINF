@@ -237,13 +237,6 @@ def train_student(net, teacher, optimizer, criterion, scheduler):
             loss = criterion(outputs_student, labels)
         
         if opts.loss_type == 'both' or opts.loss_type == 'at' and opts.at_type != 'none':
-            # if opts.at_type == 'backbone':
-            #     ints_teacher, ints_student = utils.match_at_layers(ints_teacher, ints_student)  
-            if 'mobilenet' in opts.model:
-                ints_teacher = [ints_teacher[4]] + [ints_teacher[-1]]
-            else:
-                ints_student = [ints_teacher[0]] + ints_teacher[4:]
-                ints_teacher = [ints_teacher[0]] + ints_teacher[4:]
          
              
             adjusted_beta = (opts.beta*3)/len(ints_student)    

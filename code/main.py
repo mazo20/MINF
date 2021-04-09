@@ -130,6 +130,7 @@ def main(opts):
     if opts.ckpt is not None and os.path.isfile(opts.ckpt):
         checkpoint = torch.load(opts.ckpt, map_location=torch.device('cpu'))
         checkpoint['teacher_opts']['save_val_results'] = opts.save_val_results
+        checkpoint['teacher_opts']['ckpt'] = opts.ckpt
         opts = utils.Bunch(checkpoint['teacher_opts'])
     
     model = model_map[opts.model](num_classes=opts.num_classes, output_stride=opts.output_stride, opts=opts)

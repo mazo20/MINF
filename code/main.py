@@ -282,8 +282,8 @@ if __name__ == '__main__':
     
     # Setup dataloader
     train_dst, val_dst = get_dataset(opts)
-    train_loader = data.DataLoader(train_dst, batch_size=opts.batch_size, shuffle=True, num_workers=opts.num_workers)
-    val_loader = data.DataLoader(val_dst, batch_size=opts.val_batch_size, shuffle=True, num_workers=opts.num_workers)
+    train_loader = data.DataLoader(train_dst, batch_size=opts.batch_size, shuffle=opts.save_val_results == False, num_workers=opts.num_workers)
+    val_loader = data.DataLoader(val_dst, batch_size=opts.val_batch_size, shuffle=opts.save_val_results == False, num_workers=opts.num_workers)
     print("Dataset: %s, Train set: %d, Val set: %d" %
           (opts.dataset, len(train_dst), len(val_dst)))
     

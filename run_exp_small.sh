@@ -1,5 +1,5 @@
-#USAGE: bash run_exp.sh <gen experiment file> <name of the experiment>
-#EXAMPLE: bash run_exp.sh gen_best.py bestModel
+#USAGE: bash run_exp_small.sh <gen experiment file> <name of the experiment>
+#EXAMPLE: bash run_exp_small.sh gen_best.py bestModel
 python3 $1 $2
 mkdir -p results/$2
 cp $1 results/$2

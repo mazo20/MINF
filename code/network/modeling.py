@@ -5,7 +5,10 @@ from . import mobilenetv2
 
 def _segm_resnet(name, backbone_name, num_classes, output_stride, pretrained_backbone, opts):
 
-    if output_stride == 8:
+    if output_stride == 4:
+        replace_stride_with_dilation=[True, True, True]
+        aspp_dilate = [24, 48, 72]
+    elif output_stride == 8:
         replace_stride_with_dilation=[False, True, True]
         aspp_dilate = [12, 24, 36]
     elif output_stride == 16:

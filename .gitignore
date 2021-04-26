@@ -8,3 +8,4 @@ experiment.txt
 checkpoints/
 *.pth
 report/
+*.pdf

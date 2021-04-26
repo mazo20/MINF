@@ -32,7 +32,7 @@ def get_argparser():
     parser.add_argument("--separable", default='none', type=str, choices=['none', 'bottleneck', 'grouped'])
     parser.add_argument("--kernel_sharing", type=str, choices=['true', 'false'], default='false')
     parser.add_argument("--only_3_kernel_sharing", type=str, choices=['true', 'false'], default='false')
-    parser.add_argument("--output_stride", type=int, default=16, choices=[8, 16, 32])
+    parser.add_argument("--output_stride", type=int, default=16, choices=[4, 8, 16, 32])
     parser.add_argument("--at_type", type=str, default='none',  choices=['none', 'backbone', 'aspp-output', 'aspp-atrous', 'aspp-all'])
     parser.add_argument("--loss_type", type=str, default='standard', choices=['standard', 'kd', 'at', 'both'])
     parser.add_argument("--large_aspp", type=str, default='normal', choices=['normal', 'medium', 'large', 'extra_large'])

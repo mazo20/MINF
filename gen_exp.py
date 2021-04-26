@@ -15,12 +15,17 @@ base_call = (f"python code/main.py  --data_root {DATA_HOME}/input")
 repeats = 2
 
 config = {
-    '--output_stride': ['16'],
-    '--model': ['deeplabv3plus_resnet50', 'deeplabv3_resnet50'],
-    '': ['--separable_conv', ''],
+    '--results_root': ['results/' + sys.argv[1]],
+    '--output_stride': ['16', '32'],
+    '--model': ['v3plus_resnet50', 'v3plus_mobilenet'],
+    '--separable': ['none', 'grouped', 'bottleneck'],
     '--mode': ['teacher'],
+    '--kernel_sharing': ['true', 'false'],
+    # '--at_type': ['aspp-all', 'aspp-output', 'aspp-atrous'],
+    # '--large_aspp': ['normal', 'medium', 'large', 'extra_large'],
     '--batch_size': ['16'], 
-    '--crop_size': ['321'] * repeats,
+    '--crop_size': ['256'] * repeats,
+    '--random_seed': ['1'],
     # '--teacher_ckpt': ['checkpoints/best_plusmobilenet.pth'],
     
 }
